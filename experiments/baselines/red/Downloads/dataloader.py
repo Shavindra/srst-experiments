@@ -4,8 +4,6 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
 import utils as utils
-import numpy as np
-
 from warnings import filterwarnings
 filterwarnings("ignore")
 
@@ -30,7 +28,7 @@ class ImageMaskDatasetRGB(Dataset):
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.transform = transform
-        self.masks = os.listdir(mask_dir)[:200]
+        self.masks = os.listdir(mask_dir)[:50]
 
         print('LEN', len(self.masks))
 
@@ -63,30 +61,8 @@ class ImageMaskDatasetRGB(Dataset):
 
 
 class ImageMaskDatasetGrayscale(ImageMaskDatasetRGB):
+    # ... [rest of the class definition remains unchanged]
 
-    def __getitem__(self, idx):
-        # Load the image and mask
-
-        img_path = os.path.join(self.image_dir, self.masks[idx])
-        mask_path = os.path.join(self.mask_dir, self.masks[idx])
-
-        image = Image.open(img_path).convert("RGB")
-        mask = Image.open(mask_path) # Mask is already grayscale so no need to convert
-        #mask = Image.open(mask_path).convert("L")  # assuming mask is also RGB
-
-        # Convert mask to 1 channel grayscale and then apply binary threshold
-        # mask = mask.convert("L")
-        # mask = mask.point(lambda p: p > 0 and 1)
-
-        if self.transform:
-            image = self.transform(image)
-            mask = self.transform(mask)
-
-        return image, mask
-  
-
-class ImageSVMDataset(ImageMaskDatasetRGB):
-    
     def __getitem__(self, idx):
         # Load the image and mask
 
@@ -96,20 +72,16 @@ class ImageSVMDataset(ImageMaskDatasetRGB):
         image = Image.open(img_path).convert("RGB")
         mask = Image.open(mask_path).convert("L")  # assuming mask is also RGB
 
-            # Convert the image and mask to numpy arrays
-        image_np = np.array(image)
-        mask_np = np.array(mask)
+        # Convert mask to 1 channel grayscale and then apply binary threshold
+        # mask = mask.convert("L")
+        mask = mask.point(lambda p: p > 0 and 1)
 
-        print('MASK SHAPE', mask_np.shape)
-        print('IMAGE SHAPE', image_np.shape)
-        # Flatten the image array
-        image_np = image_np.flatten()
+        if self.transform:
+            image = self.transform(image)
+            mask = self.transform(mask)
 
-        # Create a binary label from the mask (1 for asphalt, 0 for background)
-        label = mask_np
-
-        return image_np, label
-
+        return image, mask
+  
 # Define transformations
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -130,10 +102,3 @@ class SRST_DataloaderGray():
         self.dataset = ImageMaskDatasetGrayscale(image_dir=image_dir, mask_dir=mask_dir, transform=transform)
         self.data_loader = DataLoader(self.dataset, batch_size=4, num_workers=2)
         pass
-
-class SRST_DataloaderSVM():
-    
-        def __init__(self, image_dir='path/to/images', mask_dir='path/to/masks', transform=transform):
-            self.dataset = ImageSVMDataset(image_dir=image_dir, mask_dir=mask_dir, transform=transform)
-            self.data_loader = DataLoader(self.dataset, batch_size=4, num_workers=2)
-            pass
