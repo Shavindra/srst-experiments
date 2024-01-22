@@ -19,7 +19,7 @@ class ImageMaskDatasetRGB(Dataset):
     creating custom datasets and data loaders, transforms from torchvision for 
     image transformations, and Image from PIL for opening and manipulating images.
     """
-    def __init__(self, image_dir, mask_dir, transform=None, mask_prefix='', mask_count=200):
+    def __init__(self, image_dir, mask_dir, transform=None, mask_prefix='', mask_count=999999):
 
         """    
         In the __init__ method, the image and mask directories are saved, along with any 
@@ -123,7 +123,7 @@ transform = transforms.Compose([
 # Create a class for dataloader
 class SRST_Dataloader():
 
-    def __init__(self, image_dir=None, mask_dir=None, transform=transform, mask_count=200):
+    def __init__(self, image_dir=None, mask_dir=None, transform=transform, mask_count=999999):
 
         self.dataset = ImageMaskDatasetRGB(image_dir=image_dir, mask_dir=mask_dir, transform=transform, mask_count=mask_count)
         self.data_loader = DataLoader(self.dataset, batch_size=4, num_workers=2)
@@ -132,7 +132,7 @@ class SRST_Dataloader():
     
 class SRST_DataloaderGray():
 
-    def __init__(self, image_dir=None, mask_dir=None, transform=transform, mask_count=200):
+    def __init__(self, image_dir=None, mask_dir=None, transform=transform, mask_count=999999):
         self.dataset = ImageMaskDatasetGrayscale(image_dir=image_dir, mask_dir=mask_dir, transform=transform, mask_count=mask_count)
         self.data_loader = DataLoader(self.dataset, batch_size=4, num_workers=2)
         pass

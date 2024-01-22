@@ -94,7 +94,7 @@ best_loss = float('inf')
 
 EPOCHS = 20
 THRESHOLD = 0.5  # Adjust as needed
-MASK_COUNT = 99999999
+MASK_COUNT = 400
 
 
 

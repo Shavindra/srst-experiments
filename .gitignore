@@ -5,4 +5,5 @@ runs
 runs_log*
 *_logs*
 bin
-experiments/baselines/asphalt/experiments/baselines/asphalt/tensorboard/UNet_asphalt
+*.pkl*
+tensorboard*

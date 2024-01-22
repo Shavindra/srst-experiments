@@ -8,7 +8,7 @@ import sys
 sys.path.append('../../..')  # This is /home/sfonseka/dev/SRST/srst-dataloader
 
 # Now you can import your module
-from models.UNET import UNetBaseline
+from models.hrnet import HighResolutionNetBaseline
 from utils import dataloader as dl
 
 # %%
@@ -48,8 +48,8 @@ now_before = now_before.timestamp()
 now = now_before
 # %%
 
-CLASS_NAME = 'asphalt'
-EXPERIMENT_MODEL = 'UNET'
+CLASS_NAME = 'tiles'
+EXPERIMENT_MODEL = 'HRNET'
 DATASET_VARIANT = 'binary_grayscale'
 
 IMG_DIR = f'/projects/0/gusr51794/srst_scratch_drive/binary_training/images/512/{CLASS_NAME}'
@@ -68,7 +68,13 @@ MODEL_SAVE_PATH = f'runs/{EXPERIMENT_NAME_VERSION}/models'
 # Create directories to save results
 os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
 
-# %%
+
+
+# Load yaml file
+import yaml
+
+with open('/home/sfonseka/dev/SRST/srst-dataloader/models/configs/hrnet_config.yaml') as f:
+    config = yaml.load(f, Loader=yaml.FullLoader)
 
 
 
@@ -83,29 +89,27 @@ writer = SummaryWriter(TENSOIRBOARD_DIR)
 
 # Create a CSV file and write the headers
 MODEL_RESULT_FILE = f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/{EXPERIMENT_MODEL}/experiment_results.csv'
-lock = FileLock("/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET/experiment_results.lock")
+lock = FileLock(f"/home/sfonseka/dev/SRST/srst-dataloader/experiments/{EXPERIMENT_MODEL}/experiment_results.lock")
 with open(f'{MODEL_RESULT_FILE}', 'a', newline='') as file:
     exp_stats = csv.writer(file)
 #    exp_stats.writerow(["Experiment", "Version", "Epoch", "Train Loss", "Validation Loss", "Train IoU", "Validation IoU", "Train Accuracy", "Validation Accuracy"])
 
-
 best_loss = float('inf')
-
 
 EPOCHS = 20
 THRESHOLD = 0.5  # Adjust as needed
-MASK_COUNT = 99999999
+MASK_COUNT = 400
 
 
 
-LR = 0.1
+LR = 0.001
 
 dataloader = dl.SRST_DataloaderGray(mask_dir=LABEL_DIR, image_dir=IMG_DIR, mask_count=MASK_COUNT)
 val_dataloader = dl.SRST_DataloaderGray(mask_dir=VAL_DIR, image_dir=IMG_DIR, mask_count=MASK_COUNT)
 
-
 # Example of model instantiation
-model = UNetBaseline(out_classes=1).to(DEVICE)  # For grayscale, out_classes should be 1
+model = HighResolutionNetBaseline(config=config)
+model = model.to(DEVICE)
 
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=LR)
@@ -113,6 +117,24 @@ optimizer = optim.Adam(model.parameters(), lr=LR)
 train_loader = dataloader.data_loader
 val_loader = val_dataloader.data_loader
 
+# %%
+print('CLASS_NAME: ', CLASS_NAME)
+print('EXPERIMENT_MODEL: ', EXPERIMENT_MODEL)
+print('EXPERIMENT_NAME: ', EXPERIMENT_NAME)
+print('EXPERIMENT_NAME_VERSION: ', EXPERIMENT_NAME_VERSION)
+print('RESULT_DIR: ', RESULT_DIR)
+print('LOG_DIR: ', LOG_DIR)
+print('TENSOIRBOARD_DIR: ', TENSOIRBOARD_DIR)
+print('MODEL_SAVE_PATH: ', MODEL_SAVE_PATH)
+print('MODEL_RESULT_FILE: ', MODEL_RESULT_FILE)
+print('EPOCHS: ', EPOCHS)
+print('THRESHOLD: ', THRESHOLD)
+print('MASK_COUNT: ', MASK_COUNT)
+print('LR: ', LR)
+print('DEVICE: ', DEVICE)
+print('optimizer: ', optimizer.__class__.__name__)
+print('criterion: ', criterion.__class__.__name__)
+print('CONFIG: ', config)
 
 # Create a CSV file and write the headers and values
 with open(f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/{EXPERIMENT_MODEL}/experiment_setup.csv', 'a', newline='') as file:
@@ -155,13 +177,17 @@ with open(f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/{EXPERIMENT_MODE
 epoch_number = 0
 best_loss = float('inf')
 
-def train_one_epoch(model, train_loader, criterion, optimizer, device):
+
+# %%
+
+
+def train_one_epoch(model, train_loader, criterion, optimizer, device, threshold):
     print('Training')
     model.train()
     total_loss = 0
     
-    metric_iou = IoU().to(DEVICE)  # Initialize IoU metric for binary classification
-    metric_accuracy = BinaryAccuracy().to(DEVICE)  # Initialize accuracy metric for binary classification
+    metric_iou = IoU().to(device)  # Initialize IoU metric for binary classification
+    metric_accuracy = BinaryAccuracy().to(device)  # Initialize accuracy metric for binary classification
 
     progress_bar = tqdm(train_loader, desc='Training', leave=False)
     for images, masks in progress_bar:
@@ -182,7 +208,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
         total_loss += loss.item()
 
         # Update IoU metric
-        preds = (outputs > THRESHOLD).int()  # Convert outputs to binary predictions
+        preds = (outputs > threshold).int()  # Convert outputs to binary predictions
 
         metric_iou.update(preds, masks)
         metric_accuracy.update(preds, masks)
@@ -203,28 +229,36 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
     return metrics
 
 
-def eval_model(model, val_loader, criterion, device):
+def eval_model(model, val_loader, criterion, device, threshold):
     model.eval()
     total_loss = 0
 
 
-    metric_eval_iou = IoU().to(DEVICE)  # Initialize IoU for binary classification (background, asphalt)
-    metric_eval_accuracy = BinaryAccuracy().to(DEVICE)  # Initialize accuracy metric for binary classification
+    metric_eval_iou = IoU().to(device)  # Initialize IoU for binary classification (background, class)
+    metric_eval_accuracy = BinaryAccuracy().to(device)  # Initialize accuracy metric for binary classification
 
     progress_bar = tqdm(val_loader, desc='Validation', leave=False)
     with torch.no_grad():
-        for eval_images, eval_masks in progress_bar:
-            eval_images, eval_masks = eval_images.to(device), eval_masks.to(device)
+        for img, msk in progress_bar:
+            eval_images, eval_masks = img.to(device), msk.to(device)
+
             outputs = model(eval_images)
+
             loss = criterion(outputs, eval_masks)
             total_loss += loss.item()
 
+            print('OUTPUT SHAPE: ', outputs.shape)
             # Update IoU metric
             # For binary classification, you can use a threshold to convert outputs to binary format
-            eval_preds = (outputs > THRESHOLD).int()  # Adjust THRESHOLD as needed, e.g., 0.5
+            eval_preds = (outputs > threshold).int()  # Adjust threshold as needed, e.g., 0.5
+
+            print('eval_preds: ', eval_preds.shape)
+            print('eval_masks: ', eval_masks.shape)
 
             metric_eval_iou.update(eval_preds, eval_masks)
             metric_eval_accuracy.update(eval_preds, eval_masks)
+
+            print('metric_eval_iou: ', metric_eval_iou.compute())
 
             progress_bar.set_postfix(loss=loss.item())
 
@@ -239,15 +273,14 @@ def eval_model(model, val_loader, criterion, device):
         'eval_accuracy': score_eval_accuracy,
     }
 
+    print('EPOCH METRICS', metrics)
+
     return metrics
 
 
-# %%
-
-
 for epoch in tqdm(range(EPOCHS), desc='Epochs'):  # tqdm wrapper for epochs
-    train_metrics = train_one_epoch(model, train_loader, criterion, optimizer, DEVICE)
-    val_metrics = eval_model(model, val_loader, criterion, DEVICE)
+    train_metrics = train_one_epoch(model, train_loader, criterion, optimizer, device=DEVICE, threshold=THRESHOLD)
+    val_metrics = eval_model(model, val_loader, criterion, device=DEVICE, threshold=THRESHOLD)
 
     train_loss = train_metrics['train_loss']
     train_metric_iou = train_metrics['train_iou'].item()

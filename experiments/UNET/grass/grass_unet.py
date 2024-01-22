@@ -48,7 +48,7 @@ now_before = now_before.timestamp()
 now = now_before
 # %%
 
-CLASS_NAME = 'asphalt'
+CLASS_NAME = 'grass'
 EXPERIMENT_MODEL = 'UNET'
 DATASET_VARIANT = 'binary_grayscale'
 
@@ -68,7 +68,7 @@ MODEL_SAVE_PATH = f'runs/{EXPERIMENT_NAME_VERSION}/models'
 # Create directories to save results
 os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
 
-# %%
+
 
 
 
@@ -94,11 +94,11 @@ best_loss = float('inf')
 
 EPOCHS = 20
 THRESHOLD = 0.5  # Adjust as needed
-MASK_COUNT = 99999999
+MASK_COUNT = 999999999
 
 
 
-LR = 0.1
+LR = 0.001
 
 dataloader = dl.SRST_DataloaderGray(mask_dir=LABEL_DIR, image_dir=IMG_DIR, mask_count=MASK_COUNT)
 val_dataloader = dl.SRST_DataloaderGray(mask_dir=VAL_DIR, image_dir=IMG_DIR, mask_count=MASK_COUNT)
@@ -113,6 +113,23 @@ optimizer = optim.Adam(model.parameters(), lr=LR)
 train_loader = dataloader.data_loader
 val_loader = val_dataloader.data_loader
 
+# %%
+print('CLASS_NAME: ', CLASS_NAME)
+print('EXPERIMENT_MODEL: ', EXPERIMENT_MODEL)
+print('EXPERIMENT_NAME: ', EXPERIMENT_NAME)
+print('EXPERIMENT_NAME_VERSION: ', EXPERIMENT_NAME_VERSION)
+print('RESULT_DIR: ', RESULT_DIR)
+print('LOG_DIR: ', LOG_DIR)
+print('TENSOIRBOARD_DIR: ', TENSOIRBOARD_DIR)
+print('MODEL_SAVE_PATH: ', MODEL_SAVE_PATH)
+print('MODEL_RESULT_FILE: ', MODEL_RESULT_FILE)
+print('EPOCHS: ', EPOCHS)
+print('THRESHOLD: ', THRESHOLD)
+print('MASK_COUNT: ', MASK_COUNT)
+print('LR: ', LR)
+print('DEVICE: ', DEVICE)
+print('optimizer: ', optimizer.__class__.__name__)
+print('criterion: ', criterion.__class__.__name__)
 
 # Create a CSV file and write the headers and values
 with open(f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/{EXPERIMENT_MODEL}/experiment_setup.csv', 'a', newline='') as file:
@@ -208,7 +225,7 @@ def eval_model(model, val_loader, criterion, device):
     total_loss = 0
 
 
-    metric_eval_iou = IoU().to(DEVICE)  # Initialize IoU for binary classification (background, asphalt)
+    metric_eval_iou = IoU().to(DEVICE)  # Initialize IoU for binary classification (background, class)
     metric_eval_accuracy = BinaryAccuracy().to(DEVICE)  # Initialize accuracy metric for binary classification
 
     progress_bar = tqdm(val_loader, desc='Validation', leave=False)
