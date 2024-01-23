@@ -21,8 +21,8 @@ clf = svm.SVC()
 from sklearn.metrics import jaccard_score
 
 # Initialize the data loaders
-train_loader = dl.SRST_DataloaderSVM(mask_dir=label_dir, image_dir=image_dir, mask_count=4)
-test_loader = dl.SRST_DataloaderSVM(mask_dir=val_dir, image_dir=image_dir, mask_count=4)
+train_loader = dl.SRST_DataloaderSVM(mask_dir=label_dir, image_dir=image_dir)
+test_loader = dl.SRST_DataloaderSVM(mask_dir=val_dir, image_dir=image_dir)
 
 # Initialize lists to store the images and labels
 X_train = []
@@ -59,8 +59,8 @@ y_pred_train = clf.predict(X_train)
 y_pred_test = clf.predict(X_test)
 
 # Calculate Jaccard similarity
-jaccard_train = jaccard_score(y_train, y_pred_train, average='binary')
-jaccard_test = jaccard_score(y_test, y_pred_test, average='binary')
+jaccard_train = jaccard_score(y_train, y_pred_train, average='binary', pos_label=255)
+jaccard_test = jaccard_score(y_test, y_pred_test, average='binary', pos_label=255)
 
 # Log the Jaccard similarity
 writer.add_scalar('SVM/Training Jaccard', jaccard_train)

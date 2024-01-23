@@ -1,0 +1,9 @@
+model_params:
+  model:
+  num_classes: 1
+  pretrained: False
+  aux_loss: True
+  backbone: resnet101 #resnet50 or resnet101
+
+  MODEL:
+    NAME: DeepLabv3
