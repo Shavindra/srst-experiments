@@ -1,4 +1,6 @@
-from sklearn import svm
+#from sklearn import svm
+from thundersvm import SVC
+
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import joblib
@@ -17,7 +19,14 @@ val_dir = f'/projects/0/gusr51794/srst_scratch_drive/binary_training/val/512/{cl
 # Check if GPU is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-clf = svm.SVC()
+from sklearn.multiclass import OneVsRestClassifier
+
+# Initialize the SVM
+clf = SVC( kernel='rbf', C=1.0, random_state=42, verbose=True, n_jobs=12, tol=1.9, max_iter=50)
+print('n_jobs: ', clf.n_jobs)
+print('tol: ', clf.tol)
+print(clf)
+
 from sklearn.metrics import jaccard_score
 
 # Initialize the data loaders
@@ -33,12 +42,16 @@ y_test = []
 # Iterate over the train loader
 for images, labels in train_loader.data_loader:
     for image, label in zip(images, labels):
+        print(image.shape)
+        print(label.shape)
         X_train.append(image.to(device))
         y_train.append(label.to(device))
 
 # Iterate over the test loader
 for images, labels in test_loader.data_loader:
     for image, label in zip(images, labels):
+        print(image.shape)
+        print(label.shape)
         X_test.append(image.to(device))
         y_test.append(label.to(device))
 
@@ -76,11 +89,9 @@ writer.add_scalar('SVM/Testing Accuracy', test_accuracy)
 
 writer.close()
 
-results_dir = '/home/sfonseka/dev/SRST/srst-dataloader/experiments/SVM'
-
 EXP_NAME = f'{class_name}_svm'
 EXP_VERSION = 1
-joblib.dump(clf, f'/models/{class_name}_svm.pkl')
+results_dir = '/home/sfonseka/dev/SRST/srst-dataloader/experiments/SVM'
 
 print('Results:')
 print(f'Class Name: {class_name}')
@@ -90,9 +101,15 @@ print(f'Jaccard Similarity (Test): {jaccard_test}')
 print(f'Training Accuracy: {train_accuracy}')
 print(f'Testing Accuracy: {test_accuracy}')
 
-
 with open(f'{results_dir}/{EXP_NAME}.csv', 'a') as f:
     f.write(f'{EXP_NAME},{EXP_VERSION},{class_name},{jaccard_train},{jaccard_test},{train_accuracy},{test_accuracy}\n')
+
+
+clf.save_to_file(f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/SVM/asphalt/models/{class_name}_svm.txt')
+
+
+
+
 
 
 print('Finished Training')

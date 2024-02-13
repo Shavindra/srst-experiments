@@ -23,3 +23,5 @@ tensorboard*
 **/models/*.pt
 **/models/*.pth
 baselines
+
+*.zip

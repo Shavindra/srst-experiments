@@ -3,8 +3,8 @@
 #SBATCH --ntasks=1
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --cpus-per-task=8
-#SBATCH --job-name=dlv3_cli_gpu
+#SBATCH --cpus-per-task=12
+#SBATCH --job-name=dlv3_cli
 #SBATCH --time=24:00:00
 #SBATCH --output=job_logs/slurm_output_%A.out
 

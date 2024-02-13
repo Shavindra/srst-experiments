@@ -43,7 +43,7 @@ from datetime import datetime, timedelta
 now = datetime.now()
 
 # 14 days ago
-now_before = datetime.now() - timedelta(days=4)
+now_before = datetime.now() - timedelta(days=14)
 now_before = now_before.timestamp()
 now = now_before
 # %%
@@ -249,7 +249,7 @@ def eval_model(model, val_loader, criterion, device, threshold):
             loss = criterion(outputs, eval_masks)
             total_loss += loss.item()
 
-            print('OUTPUT SHAPE: ', outputs.shape)
+            
             # Update IoU metric
             # For binary classification, you can use a threshold to convert outputs to binary format
             eval_preds = (outputs > threshold).int()  # Adjust threshold as needed, e.g., 0.5

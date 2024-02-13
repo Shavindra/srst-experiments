@@ -43,7 +43,7 @@ from datetime import datetime, timedelta
 now = datetime.now()
 
 # 14 days ago
-now_before = datetime.now() - timedelta(days=4)
+now_before = datetime.now() - timedelta(days=14)
 now_before = now_before.timestamp()
 now = now_before
 # %%
@@ -95,7 +95,7 @@ best_iou = 0
 
 EPOCHS = 20
 THRESHOLD = 0.5  # Adjust as needed
-MASK_COUNT = 400
+MASK_COUNT = 99999
 
 
 

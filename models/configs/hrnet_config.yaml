@@ -3,12 +3,6 @@ DATASET:
 MODEL:
   NAME: hrnet
   PRETRAINED: false
-  pretrained_on: ImageNet
-  PRETRAINED_WEIGHTS: ${ORG_CWD}/pretrained/${MODEL.available_weights.${MODEL.pretrained_on}}
-  available_weights:
-    ImageNet: hrnetv2_w48_imagenet_pretrained.pth
-    Paddle: HRNet_W48_C_ssld_pretrained.pth
-    Mapillary: mapillary_ocrnet.HRNet_Mscale_fast-rattlesnake.pth
   ALIGN_CORNERS: True
   INPUT_CHANNELS: 3
   EXTRA:
