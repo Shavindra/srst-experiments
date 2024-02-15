@@ -93,24 +93,11 @@ best_loss = float('inf')
 best_iou = 0
 
 
-EPOCHS = 2
+EPOCHS = 20
 THRESHOLD = 0.5  # Adjust as needed
-MASK_COUNT = 8
+MASK_COUNT = 20
 
 LR = 0.01
-
-dataloader = dl.SRST_DataloaderGray(mask_dir=LABEL_DIR, image_dir=IMG_DIR, mask_count=MASK_COUNT)
-val_dataloader = dl.SRST_DataloaderGray(mask_dir=VAL_DIR, image_dir=IMG_DIR, mask_count=MASK_COUNT)
-
-
-# Example of model instantiation
-model = UNetBaseline(out_classes=1).to(DEVICE)  # For grayscale, out_classes should be 1
-
-criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters(), lr=LR)
-
-train_loader = dataloader.data_loader
-val_loader = val_dataloader.data_loader
 
 
 
@@ -134,13 +121,14 @@ new_metrics = [
         {'name': 'precision', 'metric': metric_precision},
         {'name': 'recall', 'metric': metric_recall},
         {'name': 'f1', 'metric': metric_f1},
-     {'name': 'roc', 'metric': metric_roc},
+        # {'name': 'roc', 'metric': metric_roc},
     ]
 
 def train_one_epoch(model, train_loader, criterion, optimizer, device):
     print('Training')
     model.train()
     total_loss = 0
+    
         # Reset metrics at the start of the epoch
     for metric in new_metrics:
         metric['metric'].reset()
@@ -211,7 +199,7 @@ new_eval_metrics = [
     {'name': 'precision', 'metric': metric_eval_precision},
     {'name': 'recall', 'metric': metric_eval_recall},
     {'name': 'f1', 'metric': metric_eval_f1},
-     {'name': 'roc', 'metric': metric_eval_roc},
+    # {'name': 'roc', 'metric': metric_eval_roc},
 ]
 
 def eval_model(model, val_loader, criterion, device):
@@ -267,48 +255,38 @@ import time
 
 # Record the start time
 start_time = time.time()
-patience = 20  # Number of epochs to wait for improvement before stopping
+patience = 15  # Number of epochs to wait for improvement before stopping
 best_score = 0  # Best score achieved so far
 wait = 0  # Number of epochs we have waited so far without improvement
 
 
 import matplotlib.pyplot as plt
 import io
-import pickle
-
-pr_curves = {
-    'Training': {'precision': [], 'recall': [], 'score': []},
-    'Validation': {'precision': [], 'recall': [], 'score': []}
-}
 
 def log_pr_curve(writer, precision, recall, epoch, phase):
     # Move tensors to CPU if they are on GPU
     precision = precision.cpu()
     recall = recall.cpu()
 
-    pr_curves[phase]['precision'].append(precision)
-    pr_curves[phase]['recall'].append(recall)
-    pr_curves[phase]['score'].append(epoch)
+    # Create the PR curve plot
+    fig, ax = plt.subplots()
+    ax.plot(recall, precision, label=f'PR Curve')
+    ax.set_xlabel('Recall')
+    ax.set_ylabel('Precision')
+    ax.set_title(f'{phase} Precision-Recall Curve - Epoch {epoch}')
+    ax.legend()
+    ax.grid(True)
 
-    # # Create the PR curve plot
-    # fig, ax = plt.subplots()
-    # ax.plot(recall, precision, label=f'PR Curve')
-    # ax.set_xlabel('Recall')
-    # ax.set_ylabel('Precision')
-    # ax.set_title(f'{phase} Precision-Recall Curve - Epoch {epoch}')
-    # ax.legend()
-    # ax.grid(True)
+    # Save plot to a buffer
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    image_tensor = plt.imread(buf, format='png')
+    image_tensor = torch.from_numpy(image_tensor).permute(2, 0, 1)  # Convert to CxHxW
 
-    # # Save plot to a buffer
-    # buf = io.BytesIO()
-    # plt.savefig(buf, format='png')
-    # buf.seek(0)
-    # image_tensor = plt.imread(buf, format='png')
-    # image_tensor = torch.from_numpy(image_tensor).permute(2, 0, 1)  # Convert to CxHxW
-
-    # writer.add_image(f'{phase}/Precision-Recall Curve', image_tensor, global_step=epoch)
-    # # Close the plot
-    # plt.close(fig)
+    writer.add_image(f'{phase}/Precision-Recall Curve', image_tensor, global_step=epoch)
+    # Close the plot
+    plt.close(fig)
 
 
 for epoch in tqdm(range(EPOCHS), desc='Epochs'):  # tqdm wrapper for epochs
@@ -336,8 +314,8 @@ for epoch in tqdm(range(EPOCHS), desc='Epochs'):  # tqdm wrapper for epochs
             val_precision, val_recall, val_thresholds = val_metric_score
 
             # Log metrics
-            log_pr_curve(train_metric_score, train_precision, train_recall, epoch, 'Training')
-            log_pr_curve(val_metric_score, val_precision, val_recall, epoch, 'Validation')
+            log_pr_curve(writer, train_precision, train_recall, epoch, 'Train')
+            log_pr_curve(writer, val_precision, val_recall, epoch, 'Validation')
 
             # writer.add_scalar(f'Training/{metric_name}/', train_metric_score, logging_step, walltime=now_before)
             # writer.add_scalar(f'Validation/{metric_name}', val_metric_score,  logging_step, walltime=now_before)
@@ -414,7 +392,3 @@ with open(f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/{EXPERIMENT_MODE
         criterion.__class__.__name__,
         total_time
     ])
-
-# pickle save the pr_curves
-with open(f'runs/{EXPERIMENT_NAME_VERSION}/pr_curves.pkl', 'wb') as f:
-    pickle.dump(pr_curves, f)

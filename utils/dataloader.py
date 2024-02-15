@@ -5,6 +5,9 @@ from torchvision import transforms
 from PIL import Image
 import utils as utils
 import numpy as np
+import random
+
+random.seed(42)
 
 from warnings import filterwarnings
 filterwarnings("ignore")
