@@ -80,5 +80,5 @@ class SRST_DataloaderSVM():
     
         def __init__(self, image_dir='path/to/images', mask_dir='path/to/masks', transform=transform, mask_size=100):
             self.dataset = ImageSVMDataset(image_dir=image_dir, mask_dir=mask_dir, transform=transform, mask_size=mask_size)
-            self.data_loader = DataLoader(self.dataset, batch_size=1, num_workers=4)
+            self.data_loader = DataLoader(self.dataset, batch_size=1, num_workers=2)
             pass

@@ -59,8 +59,8 @@ def train_svm(class_name):
     from sklearn.metrics import jaccard_score
 
     # Initialize the data loaders
-    train_loader = dl.SRST_DataloaderSVM(mask_dir=label_dir, image_dir=image_dir, mask_size=500)
-    test_loader = dl.SRST_DataloaderSVM(mask_dir=val_dir, image_dir=image_dir, mask_size=500)
+    train_loader = dl.SRST_DataloaderSVM(mask_dir=label_dir, image_dir=image_dir, mask_size=800)
+    test_loader = dl.SRST_DataloaderSVM(mask_dir=val_dir, image_dir=image_dir, mask_size=800)
 
     # Initialize lists to store the images and labels
     img_train = []
