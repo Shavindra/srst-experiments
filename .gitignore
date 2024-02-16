@@ -1,5 +1,5 @@
 __pycache__
-job_logs
+**/*/job_logs/**/
 **/experiments/models
 runs
 runs_log*
@@ -23,5 +23,5 @@ tensorboard*
 **/models/*.pt
 **/models/*.pth
 baselines
-
 *.zip
+experiments/SVM/asphalt/old

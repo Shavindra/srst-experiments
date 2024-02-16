@@ -20,7 +20,7 @@ class ImageMaskDatasetRGB(Dataset):
     creating custom datasets and data loaders, transforms from torchvision for 
     image transformations, and Image from PIL for opening and manipulating images.
     """
-    def __init__(self, image_dir, mask_dir, transform=None, mask_prefix=''):
+    def __init__(self, image_dir, mask_dir, transform=None, mask_prefix='', mask_size=100):
 
         """    
         In the __init__ method, the image and mask directories are saved, along with any 
@@ -31,7 +31,7 @@ class ImageMaskDatasetRGB(Dataset):
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.transform = transform
-        self.masks = os.listdir(mask_dir)[:4]
+        self.masks = os.listdir(mask_dir)[:mask_size]
         print(f'Found {len(self.masks)} masks in {mask_dir}')
         
 
@@ -65,9 +65,9 @@ class ImageSVMDataset(ImageMaskDatasetRGB):
         # Create a binary label from the mask (1 for asphalt, 0 for background)
         label = mask_np.flatten()
 
-        print('MASK SHAPE', mask_np.shape)
-        print('IMAGE SHAPE', image_np.shape)
-        print('LABEL SHAPE', label.shape)
+        # print('MASK SHAPE', mask_np.shape)
+        # print('IMAGE SHAPE', image_np.shape)
+        # print('LABEL SHAPE', label.shape)
 
         return image_np, label
 
@@ -78,7 +78,7 @@ transform = transforms.Compose([
 
 class SRST_DataloaderSVM():
     
-        def __init__(self, image_dir='path/to/images', mask_dir='path/to/masks', transform=transform):
-            self.dataset = ImageSVMDataset(image_dir=image_dir, mask_dir=mask_dir, transform=transform)
-            self.data_loader = DataLoader(self.dataset, batch_size=1)
+        def __init__(self, image_dir='path/to/images', mask_dir='path/to/masks', transform=transform, mask_size=100):
+            self.dataset = ImageSVMDataset(image_dir=image_dir, mask_dir=mask_dir, transform=transform, mask_size=mask_size)
+            self.data_loader = DataLoader(self.dataset, batch_size=1, num_workers=4)
             pass

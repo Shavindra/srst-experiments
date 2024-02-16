@@ -3,6 +3,6 @@
 import sys
 sys.path.append('..')  # This is /home/sfonseka/dev/SRST/srst-dataloader
 
-from train import train_svm
+from utils import train_svm
 
-train_svm('asphalt')
+train_svm('tiles')

@@ -105,8 +105,8 @@ class ImageSVMDataset(ImageMaskDatasetRGB):
         image_np = np.array(image)
         mask_np = np.array(mask)
 
-        print('MASK SHAPE', mask_np.shape)
-        print('IMAGE SHAPE', image_np.shape)
+        print('MASK SHAPE', mask_np.shape, 'IMAGE SHAPE', image_np.shape )
+        print('MASK', mask_np, 'IMAGE', image_np)
         # Flatten the image array
         image_np = image_np.flatten()
 

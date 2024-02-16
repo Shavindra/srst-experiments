@@ -24,7 +24,7 @@ module purge
 source activate conda_env
 which python    
 
-CLASS_NAME="asphalt"
+CLASS_NAME="mosaic"
 echo "Training with: ${CLASS_NAME}"
 # Your job starts in the directory where you call sbatch
 cd /home/sfonseka/dev/SRST/srst-dataloader/experiments/SVM/${CLASS_NAME}
