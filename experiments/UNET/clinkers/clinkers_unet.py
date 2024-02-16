@@ -148,7 +148,10 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
         # Zero your gradients for every batch!
         optimizer.zero_grad()
         outputs = model(images)
-        
+
+        # Update IoU metric
+        outputs_sigmoid = torch.sigmoid(outputs)  # Apply sigmoid to convert to probabilities
+ 
 
         # Compute the loss and its gradients
         loss = criterion(outputs, masks)
@@ -158,9 +161,6 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
         optimizer.step()
 
         total_loss += loss.item()
-
-        # Update IoU metric
-        outputs_sigmoid = torch.sigmoid(outputs)  # Apply sigmoid to convert to probabilities
 
         # Update IoU metric
         preds = (outputs_sigmoid > THRESHOLD).int()  # Convert outputs to binary predictions
@@ -198,8 +198,7 @@ def eval_model(model, val_loader, criterion, device):
             eval_images, eval_masks = eval_images.to(device), eval_masks.to(device)
             outputs = model(eval_images)
             loss = criterion(outputs, eval_masks)
-            total_loss += loss.item()
-
+            total_loss += loss.item()ß
 
             # Apply sigmoid to convert logits to probabilities
             outputs_sigmoid = torch.sigmoid(outputs)
@@ -232,7 +231,7 @@ import time
 
 # Record the start time
 start_time = time.time()
-patience = 15  # Number of epochs to wait for improvement before stopping
+patience = 20  # Number of epochs to wait for improvement before stopping
 wait = 0  # Number of epochs we have waited so far without improvement
 
 best_val_loss = float('inf')
