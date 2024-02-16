@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=genoa
-###SBATCH --gpus=1
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
 #SBATCH --cpus-per-task=16
 #SBATCH --job-name=unet_bike
 #SBATCH --time=24:00:00
