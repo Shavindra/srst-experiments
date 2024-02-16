@@ -7,9 +7,9 @@ dirs=("asphalt" "bike" "clinkers" "grass" "mosaic" "tiles")
 output_dir=$(pwd)
 
 for dir in "${dirs[@]}"; do
-    echo "Submitting job for ${dir}" &>> output.log
+    echo "Submitting job for ${dir}" &>> "${output_dir}/output.log"
     cd /home/sfonseka/dev/SRST/srst-dataloader/experiments/SVM/${dir}
     sbatch ${dir}_svm.job &>> output.log
 done
 
-echo "All jobs submitted" &>> output.log
+echo "All jobs submitted" &>> "${output_dir}/output.log"
