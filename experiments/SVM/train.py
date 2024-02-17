@@ -4,6 +4,9 @@ from thundersvm import SVC
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import joblib
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.metrics import jaccard_score
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, matthews_corrcoef
 
 import sys
 sys.path.append('../../../')
@@ -49,7 +52,6 @@ def train_svm(class_name):
     # Check if GPU is available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    from sklearn.multiclass import OneVsRestClassifier
 
     # Initialize the SVM
     clf = SVC( kernel='rbf', C=1.0, random_state=42, verbose=True, n_jobs=40, max_iter=50)
@@ -57,7 +59,6 @@ def train_svm(class_name):
     print('tol: ', clf.tol)
     print(clf)
 
-    from sklearn.metrics import jaccard_score
 
     # Initialize the data loaders
     train_loader = dl.SRST_DataloaderSVM(mask_dir=label_dir, image_dir=image_dir, mask_size=500)
