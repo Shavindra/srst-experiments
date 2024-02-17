@@ -5,6 +5,9 @@ from torchvision import transforms
 from PIL import Image
 import utils as utils
 import numpy as np
+import random
+
+random.seed(42)
 
 from warnings import filterwarnings
 filterwarnings("ignore")
@@ -35,7 +38,7 @@ class ImageMaskDatasetRGB(Dataset):
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.transform = transform
-        self.masks = os.listdir(mask_dir)[:mask_count]
+        self.masks = os.listdir(mask_dir)[:20]
 
         print('LEN', len(self.masks))
 
