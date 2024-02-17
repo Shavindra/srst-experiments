@@ -91,9 +91,7 @@ class ImageMaskDatasetGrayscale(ImageMaskDatasetRGB):
             image = self.transform(image)
             mask = self.transform(mask)
 
-        print('MASK SHAPE', mask.shape) 
-        print('IMAGE SHAPE', image.shape)
-        print(image, mask, mask_path)
+        print('MASK SHAPE', mask.shape, 'IMAGE SHAPE', image.shape, mask_path)
 
         return image, mask, mask_path
   
