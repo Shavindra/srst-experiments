@@ -50,7 +50,7 @@ now = now_before
 EXPERIMENT_MODEL = 'UNET'
 DATASET_VARIANT = 'binary_grayscale'
 
-def train_unet(class_name, epochs=20, threshold=0.5, mask_count=99999, learning_rate=0.001):
+def train_unet(class_name, epochs=3, threshold=0.5, mask_count=10, learning_rate=0.001):
 
     EPOCHS = epochs
     THRESHOLD = threshold  # Adjust as needed

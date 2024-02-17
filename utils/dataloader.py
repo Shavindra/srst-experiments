@@ -138,7 +138,7 @@ class SRST_DataloaderGray():
     def __init__(self, image_dir=None, mask_dir=None, transform=transform, mask_count=999999):
         self.dataset = ImageMaskDatasetGrayscale(image_dir=image_dir, mask_dir=mask_dir, transform=transform, mask_count=mask_count)
         # Batch size changed to 12 and num_workers 8
-        self.data_loader = DataLoader(self.dataset, batch_size=12, num_workers=8)
+        self.data_loader = DataLoader(self.dataset, batch_size=2, num_workers=8)
         pass
 
 class SRST_DataloaderSVM():

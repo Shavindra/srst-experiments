@@ -9,4 +9,4 @@ sys.path.append('../../..')  # This is /home/sfonseka/dev/SRST/srst-dataloader
 
 from train import train_unet
 
-train_unet('bike', mask_count=20)
+train_unet('bike-asphalt', mask_count=10, epochs=4)
