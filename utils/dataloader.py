@@ -8,6 +8,7 @@ import numpy as np
 import random
 
 random.seed(42)
+torch.manual_seed(42)
 
 from warnings import filterwarnings
 filterwarnings("ignore")
@@ -38,7 +39,7 @@ class ImageMaskDatasetRGB(Dataset):
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.transform = transform
-        self.masks = os.listdir(mask_dir)[:20]
+        self.masks = os.listdir(mask_dir)[:mask_count]
 
         print('LEN', len(self.masks))
 
@@ -90,6 +91,8 @@ class ImageMaskDatasetGrayscale(ImageMaskDatasetRGB):
             image = self.transform(image)
             mask = self.transform(mask)
 
+        print('MASK SHAPE', mask.shape, 'IMAGE SHAPE', image.shape, mask_path)
+
         return image, mask, mask_path
   
 
@@ -138,7 +141,7 @@ class SRST_DataloaderGray():
     def __init__(self, image_dir=None, mask_dir=None, transform=transform, mask_count=999999):
         self.dataset = ImageMaskDatasetGrayscale(image_dir=image_dir, mask_dir=mask_dir, transform=transform, mask_count=mask_count)
         # Batch size changed to 12 and num_workers 8
-        self.data_loader = DataLoader(self.dataset, batch_size=12, num_workers=8)
+        self.data_loader = DataLoader(self.dataset, batch_size=2, num_workers=8)
         pass
 
 class SRST_DataloaderSVM():
