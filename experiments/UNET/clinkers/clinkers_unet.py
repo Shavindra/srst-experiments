@@ -141,6 +141,8 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
     metric_iou = IoU().to(DEVICE)  # Initialize IoU metric for binary classification
     metric_accuracy = BinaryAccuracy().to(DEVICE)  # Initialize accuracy metric for binary classification
 
+
+
     progress_bar = tqdm(train_loader, desc='Training', leave=False)
     for images, masks in progress_bar:
         images, masks = images.to(device), masks.to(device)
@@ -216,6 +218,7 @@ def eval_model(model, val_loader, criterion, device):
     
     score_eval_iou = metric_eval_iou.compute()  # Compute final IoU score
     score_eval_accuracy = metric_eval_accuracy.compute()  # Compute final accuracy score
+    
 
     metrics = {
         'eval_loss': avg_eval_loss,
