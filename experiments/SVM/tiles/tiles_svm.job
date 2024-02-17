@@ -4,7 +4,7 @@
 #SBATCH --partition=rome
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=48G
-#SBATCH --job-name=svm_asphalt
+#SBATCH --job-name=svm_tiles
 #SBATCH --time=24:00:00
 #SBATCH --output=job_logs/slurm_output_%A.out
 
@@ -24,7 +24,7 @@ module purge
 source activate conda_env
 which python    
 
-CLASS_NAME="asphalt"
+CLASS_NAME="tiles"
 echo "Training with: ${CLASS_NAME}"
 # Your job starts in the directory where you call sbatch
 cd /home/sfonseka/dev/SRST/srst-dataloader/experiments/SVM/${CLASS_NAME}
