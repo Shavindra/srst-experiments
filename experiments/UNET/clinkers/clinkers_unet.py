@@ -89,12 +89,9 @@ with open(f'{MODEL_RESULT_FILE}', 'a', newline='') as file:
 #    exp_stats.writerow(["Experiment", "Version", "Epoch", "Train Loss", "Validation Loss", "Train IoU", "Validation IoU", "Train Accuracy", "Validation Accuracy"])
 
 
-best_loss = float('inf')
-
-
 EPOCHS = 20
 THRESHOLD = 0.5  # Adjust as needed
-MASK_COUNT = 400
+MASK_COUNT = 9999
 
 
 
@@ -131,46 +128,10 @@ print('DEVICE: ', DEVICE)
 print('optimizer: ', optimizer.__class__.__name__)
 print('criterion: ', criterion.__class__.__name__)
 
-# Create a CSV file and write the headers and values
-with open(f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/{EXPERIMENT_MODEL}/experiment_setup.csv', 'a', newline='') as file:
-    stats = csv.writer(file)
-    # stats.writerow([
-    #     "EXPERIMENT_NAME",
-    #     "EXPERIMENT_NAME_VERSION",
-    #     "IMG_DIR",
-    #     "LABEL_DIR",
-    #     "VAL_DIR",
-    #     "CLASS_NAME",
-    #     "EPOCHS",
-    #     "THRESHOLD",
-    #     "MASK_COUNT",
-    #     "DEVICE",
-    #     "LR",
-    #     "OPTIMIZER",
-    #     "CRITERION"
-    # ])
-    stats.writerow([
-        EXPERIMENT_NAME,
-        EXPERIMENT_NAME_VERSION,
-        IMG_DIR,
-        LABEL_DIR,
-        VAL_DIR,
-        CLASS_NAME,
-        EPOCHS,
-        THRESHOLD,
-        MASK_COUNT,
-        DEVICE,
-        LR,
-        optimizer.__class__.__name__,
-        criterion.__class__.__name__
-
-    ])
-
-
-
 
 epoch_number = 0
 best_loss = float('inf')
+best_iou = 0
 
 def train_one_epoch(model, train_loader, criterion, optimizer, device):
     print('Training')
@@ -180,6 +141,8 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
     metric_iou = IoU().to(DEVICE)  # Initialize IoU metric for binary classification
     metric_accuracy = BinaryAccuracy().to(DEVICE)  # Initialize accuracy metric for binary classification
 
+
+
     progress_bar = tqdm(train_loader, desc='Training', leave=False)
     for images, masks in progress_bar:
         images, masks = images.to(device), masks.to(device)
@@ -187,7 +150,10 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
         # Zero your gradients for every batch!
         optimizer.zero_grad()
         outputs = model(images)
-        
+
+        # Update IoU metric
+        outputs_sigmoid = torch.sigmoid(outputs)  # Apply sigmoid to convert to probabilities
+ 
 
         # Compute the loss and its gradients
         loss = criterion(outputs, masks)
@@ -199,7 +165,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
         total_loss += loss.item()
 
         # Update IoU metric
-        preds = (outputs > THRESHOLD).int()  # Convert outputs to binary predictions
+        preds = (outputs_sigmoid > THRESHOLD).int()  # Convert outputs to binary predictions
 
         metric_iou.update(preds, masks)
         metric_accuracy.update(preds, masks)
@@ -234,11 +200,14 @@ def eval_model(model, val_loader, criterion, device):
             eval_images, eval_masks = eval_images.to(device), eval_masks.to(device)
             outputs = model(eval_images)
             loss = criterion(outputs, eval_masks)
-            total_loss += loss.item()
+            total_loss += loss.item()ß
+
+            # Apply sigmoid to convert logits to probabilities
+            outputs_sigmoid = torch.sigmoid(outputs)
 
             # Update IoU metric
             # For binary classification, you can use a threshold to convert outputs to binary format
-            eval_preds = (outputs > THRESHOLD).int()  # Adjust THRESHOLD as needed, e.g., 0.5
+            eval_preds = (outputs_sigmoid > THRESHOLD).int()  # Adjust THRESHOLD as needed, e.g., 0.5
 
             metric_eval_iou.update(eval_preds, eval_masks)
             metric_eval_accuracy.update(eval_preds, eval_masks)
@@ -249,6 +218,7 @@ def eval_model(model, val_loader, criterion, device):
     
     score_eval_iou = metric_eval_iou.compute()  # Compute final IoU score
     score_eval_accuracy = metric_eval_accuracy.compute()  # Compute final accuracy score
+    
 
     metrics = {
         'eval_loss': avg_eval_loss,
@@ -260,7 +230,14 @@ def eval_model(model, val_loader, criterion, device):
 
 
 # %%
+import time
 
+# Record the start time
+start_time = time.time()
+patience = 20  # Number of epochs to wait for improvement before stopping
+wait = 0  # Number of epochs we have waited so far without improvement
+
+best_val_loss = float('inf')
 
 for epoch in tqdm(range(EPOCHS), desc='Epochs'):  # tqdm wrapper for epochs
     train_metrics = train_one_epoch(model, train_loader, criterion, optimizer, DEVICE)
@@ -317,12 +294,47 @@ for epoch in tqdm(range(EPOCHS), desc='Epochs'):  # tqdm wrapper for epochs
 
     writer.flush()
     # Save the model if it's the best one so far
-    if val_loss < best_loss:
-        best_loss = val_loss
-        torch.save(model.state_dict(), os.path.join(MODEL_SAVE_PATH, f'best_model_{EXPERIMENT_NAME_VERSION}.pt'))
-        print(f'Saved new best model with loss {best_loss:.4f}')
+    # Save the model if it's the best one so far in terms of IoU
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        torch.save(model.state_dict(), os.path.join(MODEL_SAVE_PATH, f'best_loss_model_{EXPERIMENT_NAME_VERSION}.pt'))
+        print(f'Saved new best model with loss {best_val_loss:.4f} at epoch {epoch_number}')
 
+
+    if val_metric_iou > best_iou:
+        best_iou = val_metric_iou
+        torch.save(model.state_dict(), os.path.join(MODEL_SAVE_PATH, f'best_model_{EXPERIMENT_NAME_VERSION}.pt'))
+        print(f'Saved new best model with IoU {best_iou:.4f} at epoch {epoch_number}')
+    else:
+        wait +=1
+
+        # If we have waited for `patience` epochs without improvement, stop training
+    if wait >= patience:
+            print("Early stopping")
+            break
 
 writer.close()
 
 
+# Compute the total running time
+total_time = time.time() - start_time
+
+# Create a CSV file and write the headers and values
+with open(f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/{EXPERIMENT_MODEL}/experiment_setup.csv', 'a', newline='') as file:
+    stats = csv.writer(file)
+    stats.writerow([
+        EXPERIMENT_NAME,
+        EXPERIMENT_NAME_VERSION,
+        IMG_DIR,
+        LABEL_DIR,
+        VAL_DIR,
+        CLASS_NAME,
+        EPOCHS,
+        THRESHOLD,
+        MASK_COUNT,
+        DEVICE,
+        LR,
+        optimizer.__class__.__name__,
+        criterion.__class__.__name__,
+        total_time
+    ])

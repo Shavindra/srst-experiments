@@ -6,7 +6,7 @@ from PIL import Image
 
 random.seed(42)
 
-def visualize_random_image_mask(dataset):
+def visualize_random_image_mask(dataset, idx=None):
     """
     Function to retrieve and visualize a random image and its corresponding mask from a dataset.
 
@@ -14,7 +14,8 @@ def visualize_random_image_mask(dataset):
     dataset (torch.utils.data.Dataset): The dataset to retrieve the image and mask from.
     """
     # Get a random index
-    idx = random.randint(0, len(dataset) - 1)
+    if idx is None:
+        idx = random.randint(0, len(dataset) - 1)
 
     print(f'Displaying the image idx {idx}')
     # Retrieve the image and mask
@@ -118,13 +119,45 @@ def superimpose_images(image, mask, transparency=0.5, grayscale=False):
 
     plt.show()
 
+def visualise_svm(image, label, original_shape=(512, 512, 3)):
+    """
+    Function to visualize an image and its corresponding label.
+
+    Parameters:
+    image (tensor): The image tensor.
+    label (2D array): The label.
+    original_shape (tuple): The original shape of the image.
+    """
+    # Convert the image tensor to a numpy array for visualization
+    if isinstance(image, np.ndarray):
+        image_np = image
+    else:
+        image_np = image.permute(1, 2, 0).numpy()
+
+    # Reshape the image back to its original shape
+    image_np = image_np.reshape(original_shape)
+
+    # Create a figure with two subplots
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+
+    # Display the image
+    axs[0].imshow(image_np)
+    axs[0].set_title('Image')
+
+    # Display the label
+    axs[1].imshow(label, cmap='gray')
+    axs[1].set_title('Label')
+
+    # Show the figure
+    plt.show()
+
 class Visualiser():
     def __init__(self, dataloader):
         self.dataset = dataloader.dataset
         pass
 
-    def vis_random(self):
-        visualize_random_image_mask(self.dataset)
+    def vis_random(self, idx=None):
+        visualize_random_image_mask(self.dataset, idx=idx)
 
     
     def vis_cv2(self, transparency=0.5):
@@ -140,3 +173,18 @@ class Visualiser():
         superimpose_images(image, mask, transparency=alpha, grayscale=grayscale)
 
 
+class VisualiserSVM():
+    def __init__(self, dataloader):
+        self.dataset = dataloader.dataset
+        pass
+
+    def vis_random(self, idx=None):
+        if idx is None:
+            idx = random.randint(0, len(self.dataset) - 1)
+
+        print(idx)
+        image, mask = self.dataset[idx]
+
+
+
+        visualise_svm(image, mask)

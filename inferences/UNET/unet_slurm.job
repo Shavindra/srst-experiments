@@ -1,0 +1,26 @@
+#!/bin/bash
+#SBATCH --ntasks=1
+#SBATCH --partition=rome
+#SBATCH --cpus-per-task=8
+#SBATCH --job-name=unet_test
+#SBATCH --time=24:00:00
+#SBATCH --output=job_logs/slurm_output_%A.out
+
+echo "Job started at $(date -d "14 days ago")"
+
+module purge
+#module load 2022
+#module load PyTorch/1.12.0-foss-2022a-CUDA-11.7.0
+source activate conda_gpu
+which python    
+
+MODEL_NAME="UNET"
+# Your job starts in the directory where you call sbatch
+EXP_DIR_PATH="/home/sfonseka/dev/SRST/srst-dataloader/inferences"
+
+cd $EXP_DIR_PATH/$MODEL_NAME
+# Activate your environment
+# Run your code
+srun python -u test.py
+
+echo "Job ended at $(date -d "14 days ago")"

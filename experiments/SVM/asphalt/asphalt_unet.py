@@ -90,11 +90,12 @@ with open(f'{MODEL_RESULT_FILE}', 'a', newline='') as file:
 
 
 best_loss = float('inf')
+best_iou = 0
 
 
 EPOCHS = 20
 THRESHOLD = 0.5  # Adjust as needed
-MASK_COUNT = 400
+MASK_COUNT = 99999
 
 
 
@@ -154,6 +155,7 @@ with open(f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/{EXPERIMENT_MODE
 
 epoch_number = 0
 best_loss = float('inf')
+best_iou = 0
 
 def train_one_epoch(model, train_loader, criterion, optimizer, device):
     print('Training')
@@ -300,10 +302,11 @@ for epoch in tqdm(range(EPOCHS), desc='Epochs'):  # tqdm wrapper for epochs
 
     writer.flush()
     # Save the model if it's the best one so far
-    if val_loss < best_loss:
-        best_loss = val_loss
+    # Save the model if it's the best one so far in terms of IoU
+    if val_metric_iou > best_iou:
+        best_iou = val_metric_iou
         torch.save(model.state_dict(), os.path.join(MODEL_SAVE_PATH, f'best_model_{EXPERIMENT_NAME_VERSION}.pt'))
-        print(f'Saved new best model with loss {best_loss:.4f}')
+        print(f'Saved new best model with IoU {best_iou:.4f}')
 
 
 writer.close()

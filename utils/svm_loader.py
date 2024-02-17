@@ -6,6 +6,7 @@ from PIL import Image
 import utils as utils
 import numpy as np
 
+
 from warnings import filterwarnings
 filterwarnings("ignore")
 
@@ -31,6 +32,8 @@ class ImageMaskDatasetRGB(Dataset):
         self.mask_dir = mask_dir
         self.transform = transform
         self.masks = os.listdir(mask_dir)[:4]
+        print(f'Found {len(self.masks)} masks in {mask_dir}')
+        
 
         print('LEN', len(self.masks))
 
