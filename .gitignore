@@ -25,3 +25,5 @@ tensorboard*
 baselines
 *.zip
 experiments/SVM/asphalt/old
+
+**.tfevents*
