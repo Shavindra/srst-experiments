@@ -8,6 +8,7 @@ import numpy as np
 import random
 
 random.seed(42)
+torch.manual_seed(42)
 
 from warnings import filterwarnings
 filterwarnings("ignore")
@@ -38,7 +39,7 @@ class ImageMaskDatasetRGB(Dataset):
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.transform = transform
-        self.masks = os.listdir(mask_dir)[:20]
+        self.masks = os.listdir(mask_dir)[:mask_count]
 
         print('LEN', len(self.masks))
 
@@ -89,6 +90,8 @@ class ImageMaskDatasetGrayscale(ImageMaskDatasetRGB):
         if self.transform:
             image = self.transform(image)
             mask = self.transform(mask)
+
+        print('MASK SHAPE', mask.shape, 'IMAGE SHAPE', image.shape, mask_path)
 
         return image, mask, mask_path
   
