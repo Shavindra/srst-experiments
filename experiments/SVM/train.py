@@ -15,7 +15,6 @@ from sklearn.metrics import classification_report, confusion_matrix
 import sys
 sys.path.append('../../../')
 sys.path.append('../..')  # This is /home/sfonseka/dev/SRST/srst-dataloader
-sys.path.append('..')  # This is /home/sfonseka/dev/SRST/srst-dataloader/experiments/SVM
 
 from utils import svm_loader as dl
 import torch

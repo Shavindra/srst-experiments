@@ -7,8 +7,6 @@ import time
 ## SET UP PATHS
 import sys
 sys.path.append('../../..')  # This is /home/sfonseka/dev/SRST/srst-dataloader
-sys.path.append('../..')
-sys.path.append('..')  # This is /home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET
 
 # Now you can import your module
 from models.UNET import UNetBaseline
@@ -55,7 +53,7 @@ now = now_before
 EXPERIMENT_MODEL = 'UNET'
 DATASET_VARIANT = 'binary_grayscale'
 
-def train_unet(class_name, epochs=3, threshold=0.5, mask_count=10, learning_rate=0.001):
+def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_rate=0.001):
 
     EPOCHS = epochs
     THRESHOLD = threshold  # Adjust as needed
@@ -354,7 +352,12 @@ def train_unet(class_name, epochs=3, threshold=0.5, mask_count=10, learning_rate
                     train_metric_iou,
                     val_metric_iou,
                     train_metric_accuracy,
-                    val_metric_accuracy
+                    val_metric_accuracy,
+                    train_masked_iou,
+                    val_masked_iou,
+                    train_masked_accuracy,
+                    val_masked_accuracy
+                    
                 ])
 
                 print('Wrote metrics to CSV file: ', f'{MODEL_RESULT_FILE}')
