@@ -39,6 +39,4 @@ cd $EXP_DIR_PATH/$CLASS_NAME
 # Run your code
 srun python -u ${CLASS_NAME}_${EXP_NAME}.py
 
-srun python -u ${CLASS_NAME}_${EXP_NAME}.py
-
 echo "Job ended at $(date -d "14 days ago")"

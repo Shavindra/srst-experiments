@@ -9,4 +9,4 @@ sys.path.append('/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET')  # T
 
 from train import train_unet
 
-train_unet('clinkers', mask_count=500, epochs=20)
+train_unet('clinkers', mask_count=500, epochs=25)

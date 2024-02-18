@@ -45,7 +45,7 @@ from datetime import datetime, timedelta
 now = datetime.now()
 
 # 14 days ago
-now_before = datetime.now() - timedelta(days=14)
+now_before = datetime.now() - timedelta(days=3)
 now_before = now_before.timestamp()
 now = now_before
 # %%
@@ -56,14 +56,19 @@ DATASET_VARIANT = 'binary_grayscale'
 
 def train_unet(class_name, epochs=3, threshold=0.5, mask_count=6, learning_rate=0.001):
 
+    def tensor_to_value(tensor):
+        if isinstance(tensor, torch.Tensor):
+            return tensor.item()
+        return tensor
 
     def save_metrics_to_csv(csv_file_path, experiment_name, experiment_version, epoch, train_metrics, val_metrics, lock=None):
+        """Saves training and validation metrics to a CSV file."""
         # Define field names for CSV file
         field_names = ['Experiment_Name', 'Experiment_Version', 'Epoch'] + \
                     [f'train_{m}' for m in train_metrics.keys()] + \
                     [f'val_{m}' for m in val_metrics.keys()]
 
-            # Check if the file exists and has content
+        # Check if the file exists and has content
         file_exists = os.path.isfile(csv_file_path) and os.path.getsize(csv_file_path) > 0
 
         # Acquire lock if provided (useful in multi-threaded environments)
@@ -78,9 +83,12 @@ def train_unet(class_name, epochs=3, threshold=0.5, mask_count=6, learning_rate=
                 if not file_exists:
                     exp_stats.writerow(field_names)
 
-                # Write data
-                row = [experiment_name, experiment_version, epoch] + \
-                    list(train_metrics.items()) + list(val_metrics.items())
+                # Convert tensors to values and prepare data row
+                train_values = [tensor_to_value(value) for key, value in train_metrics.items()]
+                val_values = [tensor_to_value(value) for key, value in val_metrics.items()]
+                row = [experiment_name, experiment_version, epoch] + train_values + val_values
+
+                # Write the row to the CSV
                 exp_stats.writerow(row)
                 print('Wrote metrics to CSV file:', csv_file_path)
         finally:
@@ -184,7 +192,7 @@ def train_unet(class_name, epochs=3, threshold=0.5, mask_count=6, learning_rate=
 
     # Record the start time
     start_time = time.time()
-    patience = 20  # Number of epochs to wait for improvement before stopping
+    patience = 15  # Number of epochs to wait for improvement before stopping
     wait = 0  # Number of epochs we have waited so far without improvement
 
     best_val_loss = float('inf')
@@ -271,13 +279,13 @@ def train_unet(class_name, epochs=3, threshold=0.5, mask_count=6, learning_rate=
     # %%
 
     # Save the model if it's the best one so far in terms of loss or IoU
-    def save_model_checkpoint(model, optimizer, epoch, best_loss, best_iou, filename):
+    def save_model_checkpoint(model, optimizer, epoch, best_loss, best_iou, filename, metics=None):
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'best_loss': best_loss,
-            'best_iou': best_iou
+            'best_iou': best_iou,
         }, filename)
 
         # Early stopping check...
@@ -297,18 +305,35 @@ def train_unet(class_name, epochs=3, threshold=0.5, mask_count=6, learning_rate=
             print(f'Epoch {epoch}, {metric_name}: {value}')
             writer.add_scalar(f'Metrics/{metric_name}', value, logging_step)
 
+
         # Check and save model based on best validation loss and IoU
         if val_metrics['eval_loss'] < best_val_loss:
             best_val_loss = val_metrics['eval_loss']
-            save_model_checkpoint(model, optimizer, logging_step, best_val_loss, best_iou, f'best_loss_model_{EXPERIMENT_NAME_VERSION}.pt')
+
+            save_model_checkpoint(model, optimizer, logging_step, best_val_loss, best_iou, os.path.join(f'runs/{EXPERIMENT_NAME_VERSION}/models', f'best_loss_model_{EXPERIMENT_NAME_VERSION}.pt'), {
+                'train_metrics': train_metrics,
+                'val_metrics': val_metrics
+            })
+
+            print(f'Best model saved with loss: {best_val_loss}')
 
         if val_metrics['iou_masked'] > best_mask_iou:
-            best_mask_iou = val_metrics['eval_masked_iou']
-            save_model_checkpoint(model, optimizer, logging_step, best_val_loss, best_iou, f'best_mask_iou_model_{EXPERIMENT_NAME_VERSION}.pt')
+            best_mask_iou = val_metrics['iou_masked']
+
+            save_model_checkpoint(model, optimizer, logging_step, best_val_loss, best_iou, os.path.join(f'runs/{EXPERIMENT_NAME_VERSION}/models', f'best_mask_iou_model_{EXPERIMENT_NAME_VERSION}.pt'), {
+                'train_metrics': train_metrics,
+                'val_metrics': val_metrics
+            })
+            print(f'Best model saved with masked IoU: {best_mask_iou}')
 
         if val_metrics['iou'] > best_iou:
-            best_iou = val_metrics['eval_iou']
-            save_model_checkpoint(model, optimizer, logging_step, best_val_loss, best_iou, f'best_iou_model_{EXPERIMENT_NAME_VERSION}.pt')
+            best_iou = val_metrics['iou']
+            save_model_checkpoint(model, optimizer, logging_step, best_val_loss, best_iou, os.path.join(f'runs/{EXPERIMENT_NAME_VERSION}/models', f'best_iou_model_{EXPERIMENT_NAME_VERSION}.pt'), {
+                'train_metrics': train_metrics,
+                'val_metrics': val_metrics
+            })
+            print(f'Best model saved with IoU: {best_iou}')
+
         else:
             wait += 1
 
@@ -320,10 +345,7 @@ def train_unet(class_name, epochs=3, threshold=0.5, mask_count=6, learning_rate=
         # Usage in your training loop
         csv_file_path = f'{MODEL_RESULT_FILE}'
 
-        for epoch in tqdm(range(EPOCHS), desc='Epochs'):
-
-            # Save metrics to CSV
-            save_metrics_to_csv(csv_file_path, EXPERIMENT_NAME, EXPERIMENT_NAME_VERSION, epoch + 1, train_metrics, val_metrics, lock)
+        save_metrics_to_csv(csv_file_path, EXPERIMENT_NAME, EXPERIMENT_NAME_VERSION, epoch + 1, train_metrics, val_metrics, lock)
 
 
     writer.close()

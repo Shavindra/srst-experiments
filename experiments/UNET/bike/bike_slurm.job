@@ -37,7 +37,6 @@ EXP_DIR_PATH="/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET"
 cd $EXP_DIR_PATH/$CLASS_NAME
 # Activate your environment
 # Run your code
-srun python -u ${CLASS_NAME}_${EXP_NAME}.py
 
 srun python -u ${CLASS_NAME}_${EXP_NAME}.py
 
