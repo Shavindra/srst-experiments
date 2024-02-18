@@ -53,6 +53,7 @@ now = now_before
 EXPERIMENT_MODEL = 'UNET'
 DATASET_VARIANT = 'binary_grayscale'
 
+
 def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_rate=0.001):
 
     EPOCHS = epochs
@@ -152,6 +153,34 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
         metric_iou_masked = IoU(ignore_index=0).to(DEVICE)  # Initialize IoU metric for binary classification
         metric_accuracy_masked = BinaryAccuracy(ignore_index=0).to(DEVICE)  # Initialize accuracy metric for binary classification
 
+        other_metrics = [
+            {
+                'name': 'train_precision',
+                'metric': Precision()
+            }, {
+                'name': 'train_recall',
+                'metric': Recall()
+
+            }, {
+                'name': 'train_f1',
+                'metric': F1()
+            }
+            {
+                'name': 'train_precision_masked',
+                'metric': Precision(ignore_index=0)
+            },
+            {
+                'name': 'train_recall_masked',
+                'metric': Recall(ignore_index=0)
+            },
+            {
+                'name': 'train_f1_masked',
+                'metric': F1(ignore_index=0)
+            }
+        ]
+
+
+
         progress_bar = tqdm(train_loader, desc='Training', leave=False)
         for images, masks, __paths in progress_bar:
             images, masks = images.to(device), masks.to(device)
@@ -183,6 +212,10 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
             metric_iou_masked.update(preds, masks)
             metric_accuracy_masked.update(preds, masks)
 
+            for m in other_metrics:
+                m['metric'].update(preds, masks)
+
+
 
             progress_bar.set_postfix(loss=loss.item())
 
@@ -199,7 +232,7 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
             'train_masked_accuracy': metric_accuracy_masked.compute()
         }
 
-        return metrics
+        return metrics, other_metrics
 
 
     def eval_model(model, val_loader, criterion, device):
@@ -212,6 +245,28 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
 
         metric_eval_masked_iou = IoU(ignore_index=0).to(DEVICE)  # Initialize IoU for binary classification (background, class)
         metric_eval_masked_accuracy = BinaryAccuracy(ignore_index=0).to(DEVICE)  # Initialize accuracy metric for binary classification
+
+        other_metrics = [{
+                'name': 'eval_precision',
+                'metric': Precision()
+        },{
+                'name': 'eval_recall',
+        
+                'metric': Recall()}
+        ,{      'name': 'eval_f1',  'metric': F1()  },
+            {
+                'name': 'eval_precision_masked',
+                'metric': Precision(ignore_index=0)
+            },{
+                'name': 'eval_recall_masked',
+                'metric': Recall(ignore_index=0)
+            },{
+                'name': 'eval_f1_masked',
+                'metric': F1(ignore_index=0)
+            }
+            
+            ]
+        
 
         progress_bar = tqdm(val_loader, desc='Validation', leave=False)
         with torch.no_grad():
@@ -238,13 +293,19 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
                 # Masked metrics
                 metric_eval_masked_iou.update(eval_preds, eval_msks)
                 metric_eval_masked_accuracy.update(eval_preds, eval_msks)
-
+        
+                for m in other_metrics:
+                    m['metric'].update(preds, masks)
+                    
                 progress_bar.set_postfix(loss=loss.item())
 
         avg_eval_loss = total_loss / len(val_loader)
         
         score_eval_iou = metric_eval_iou.compute()  # Compute final IoU score
         score_eval_accuracy = metric_eval_accuracy.compute()  # Compute final accuracy score
+
+        for m in other_metrics:
+            other_metrics[m['name']] = m['metric'].compute()
 
         print(f'Validation Loss: {avg_eval_loss}, Validation IoU: {score_eval_iou}, Validation Accuracy: {score_eval_accuracy}')
         metrics = {
@@ -253,9 +314,10 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
             'eval_accuracy': score_eval_accuracy,
             'eval_masked_iou': metric_eval_masked_iou.compute(),
             'eval_masked_accuracy': metric_eval_masked_accuracy.compute()
+            'eval_other_metrics': other_metrics
         }
 
-        return metrics
+        return metrics, other_metrics
 
 
     # %%
@@ -274,8 +336,8 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
 
 
     for epoch in tqdm(range(EPOCHS), desc='Epochs'):  # tqdm wrapper for epochs
-        train_metrics = train_one_epoch(model, train_loader, criterion, optimizer, DEVICE)
-        val_metrics = eval_model(model, val_loader, criterion, DEVICE)
+        train_metrics, train_other_metrics  = train_one_epoch(model, train_loader, criterion, optimizer, DEVICE)
+        val_metrics, val_other_metrics = eval_model(model, val_loader, criterion, DEVICE)
 
         train_loss = train_metrics['train_loss']
         train_metric_iou = train_metrics['train_iou'].item()
@@ -293,9 +355,10 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
         val_masked_iou = val_metrics['eval_masked_iou'].item()
         val_masked_accuracy = val_metrics['eval_masked_accuracy'].item()
 
-
-
         logging_step = epoch_number + 1
+
+
+        
 
         print(f'Epoch {epoch}, Train Loss: {train_loss}, Val Loss: {val_loss}')
         print(f'Epoch {epoch}, Logging Step: {logging_step}, Train IoU: {train_metric_iou}, Val IoU: {val_metric_iou}')
@@ -316,7 +379,15 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
         writer.add_scalars('Masked Training Accuracy vs Validation Accuracy', {'train': train_masked_accuracy, 'val': val_masked_accuracy}, logging_step, walltime=now_before)
         writer.add_scalar('Metrics/Masked_Train_IoU', train_metrics['train_masked_iou'], logging_step, walltime=now_before)
         writer.add_scalar('Metrics/Masked_Val_IoU', val_metrics['eval_masked_iou'], logging_step, walltime=now_before)
+            
+        # Other metrics to writer
+        for m in train_other_metrics:
+            # Train vs Validation metric
+            writer.add_scalars(f'Metrics/{m["name"]}', {'train': m['metric'].item(), 'val': val_other_metrics[m["name"]].item()}, logging_step, walltime=now_before)
 
+        for v in val_other_metrics:
+            # Train vs Validation metric
+            writer.add_scalars(f'Metrics/{v["name"]}', {'train': train_other_metrics[v["name"]].item(), 'val': v['metric'].item()}, logging_step, walltime=now_before)
 
         writer.add_scalar('Metrics/Train_Loss', train_loss, logging_step, walltime=now_before)
         writer.add_scalar('Metrics/Val_Loss', val_loss, logging_step, walltime=now_before)
@@ -335,7 +406,13 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
         writer.add_scalar('Metrics/Masked_Train_Accuracy', train_metrics['train_masked_accuracy'], logging_step, walltime=now_before)
         writer.add_scalar('Metrics/Masked_Val_Accuracy', val_metrics['eval_masked_accuracy'], logging_step, walltime=now_before)
 
-
+        # Other metrics to writer
+        for m in train_other_metrics:
+            writer.add_scalar(f'Metrics/{m["name"]}', m['metric'].item(), logging_step, walltime=now_before)
+                
+        for v in val_other_metrics:
+            writer.add_scalar(f'Metrics/{v["name"]}', v['metric'].item(), logging_step, walltime=now_before)            
+                
 
         epoch_number += 1
 
@@ -356,7 +433,10 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=500, learning_ra
                     train_masked_iou,
                     val_masked_iou,
                     train_masked_accuracy,
-                    val_masked_accuracy
+                    val_masked_accuracy,
+                    # Other metrics by name and tuple
+                    train_other_metrics,
+                    val_other_metrics
                     
                 ])
 
