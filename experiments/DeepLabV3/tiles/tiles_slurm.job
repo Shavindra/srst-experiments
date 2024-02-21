@@ -3,7 +3,7 @@
 #SBATCH --ntasks=1
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=18
 #SBATCH --job-name=dlv_tiles
 #SBATCH --time=24:00:00
 #SBATCH --output=job_logs/slurm_output_%A.out
@@ -14,7 +14,7 @@ module purge
 source activate conda_gpu
 which python    
 
-echo "Job started at $(date -d "14 days ago")"
+echo "Job started at $(date -d "2 days ago")"
 
 CLASS_NAME="tiles"
 EXP_NAME="DeepLabV3"
@@ -32,12 +32,11 @@ echo "Experiment Name: $EXP_NAME"
 
 
 # Your job starts in the directory where you call sbatch
-EXP_DIR_PATH="/home/sfonseka/dev/SRST/srst-dataloader/experiments/${CLASS_NAME}"
+EXP_DIR_PATH="/home/sfonseka/dev/SRST/srst-dataloader/experiments/${EXP_NAME}"
 
 cd $EXP_DIR_PATH/$CLASS_NAME
 # Activate your environment
 # Run your code
 srun python -u ${CLASS_NAME}_${EXP_NAME}.py
 
-
-echo "Job ended at $(date -d "14 days ago")"
+echo "Job ended at $(date -d "2 days ago")"

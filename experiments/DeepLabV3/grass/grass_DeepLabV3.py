@@ -9,4 +9,4 @@ sys.path.append(f'/home/sfonseka/dev/SRST/srst-dataloader/experiments/DeepLabV3'
 
 from train import train_dlv3 as trainer
 
-trainer('grass', mask_count=10, epochs=3)
+trainer('grass', mask_count=500, epochs=25)

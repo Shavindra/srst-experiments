@@ -14,7 +14,7 @@ module purge
 source activate conda_gpu
 which python    
 
-echo "Job started at $(date -d "14 days ago")"
+echo "Job started at $(date -d "2 days ago")"
 
 CLASS_NAME="bike"
 EXP_NAME="DeepLabV3"
@@ -32,7 +32,8 @@ echo "Experiment Name: $EXP_NAME"
 
 
 # Your job starts in the directory where you call sbatch
-EXP_DIR_PATH="/home/sfonseka/dev/SRST/srst-dataloader/experiments/${CLASS_NAME}"
+EXP_DIR_PATH="/home/sfonseka/dev/SRST/srst-dataloader/experiments/${EXP_NAME}"
+
 
 cd $EXP_DIR_PATH/$CLASS_NAME
 # Activate your environment
@@ -40,4 +41,4 @@ cd $EXP_DIR_PATH/$CLASS_NAME
 srun python -u ${CLASS_NAME}_${EXP_NAME}.py
 
 
-echo "Job ended at $(date -d "14 days ago")"
+echo "Job ended at $(date -d "2 days ago")"

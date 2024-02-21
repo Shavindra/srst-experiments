@@ -1,0 +1,2 @@
+image_filename,test_iou,test_accuracy,class_name,model_path
+c_set5_0_512_15_6.jpg,0.0,0.7395973205566406,tiles,/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET/tiles/runs/UNET_binary_grayscale_tiles_MASKED_METRICS_1708015922.418231/models/best_iou_model_UNET_binary_grayscale_tiles_MASKED_METRICS_1708015922.418231.pt

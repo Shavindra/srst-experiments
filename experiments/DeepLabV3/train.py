@@ -50,7 +50,7 @@ filterwarnings("ignore")
 from datetime import datetime, timedelta
 now = datetime.now()
 
-# 14 days ago
+# 2 days ago
 now_before = datetime.now() - timedelta(days=3)
 now_before = now_before.timestamp()
 now = now_before
