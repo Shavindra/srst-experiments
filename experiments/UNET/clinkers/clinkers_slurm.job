@@ -1,10 +1,9 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=gpu
-#SBATCH --gpus=1
+#SBATCH --partition=rome
 #SBATCH --cpus-per-task=16
-#SBATCH --job-name=unet_cli
+#SBATCH --job-name=unet_clinkers
 #SBATCH --time=24:00:00
 #SBATCH --output=job_logs/slurm_output_%A.out
 
@@ -14,8 +13,23 @@ module purge
 source activate conda_gpu
 which python    
 
+echo "Job started at $(date -d "14 days ago")"
+
 CLASS_NAME="clinkers"
 EXP_NAME="unet"
+
+echo "Job Name: $SLURM_JOB_NAME"
+echo "Number of Nodes: $SLURM_JOB_NUM_NODES"
+echo "Node List: $SLURM_JOB_NODELIST"
+echo "Number of CPUs: $SLURM_CPUS_ON_NODE"
+echo "Total Memory: $SLURM_MEM_PER_NODE"
+echo "Number of GPUs: $SLURM_GPUS_ON_NODE"
+
+echo "Job ID: $SLURM_JOB_ID"
+echo "Class Name: $CLASS_NAME"
+echo "Experiment Name: $EXP_NAME"
+
+
 # Your job starts in the directory where you call sbatch
 EXP_DIR_PATH="/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET"
 
@@ -23,3 +37,5 @@ cd $EXP_DIR_PATH/$CLASS_NAME
 # Activate your environment
 # Run your code
 srun python -u ${CLASS_NAME}_${EXP_NAME}.py
+
+echo "Job ended at $(date -d "14 days ago")"

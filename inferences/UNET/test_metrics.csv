@@ -1,6 +1,2 @@
-image_filename,test_iou,test_accuracy,class_name,model_name,model_path
-c_set6_2_512_14_1.jpg,0.10833445191383362,0.8988685607910156,asphalt,UNET,/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET/asphalt/preliminary/runs/UNET_binary_grayscale_asphalt_1704597437.863613/models/best_model_UNET_binary_grayscale_asphalt_1704597437.863613.pt
-c_set5_2_512_16_9.jpg,0.2109598070383072,0.5307579040527344,asphalt,UNET,/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET/asphalt/preliminary/runs/UNET_binary_grayscale_asphalt_1704597437.863613/models/best_model_UNET_binary_grayscale_asphalt_1704597437.863613.pt
-c2_nr33_set4_9_512_9_18.jpg,0.0,0.9990806579589844,asphalt,UNET,/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET/asphalt/preliminary/runs/UNET_binary_grayscale_asphalt_1704597437.863613/models/best_model_UNET_binary_grayscale_asphalt_1704597437.863613.pt
-c2_nr33_set4_0_512_5_3.jpg,0.3214723467826843,0.8796119689941406,asphalt,UNET,/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET/asphalt/preliminary/runs/UNET_binary_grayscale_asphalt_1704597437.863613/models/best_model_UNET_binary_grayscale_asphalt_1704597437.863613.pt
-c_set6_0_512_10_1.jpg,0.0,0.9722824096679688,asphalt,UNET,/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET/asphalt/preliminary/runs/UNET_binary_grayscale_asphalt_1704597437.863613/models/best_model_UNET_binary_grayscale_asphalt_1704597437.863613.pt
+image_filename,test_iou,test_accuracy,class_name,model_path
+c_set5_4_512_2_8.jpg,0.04447564855217934,0.3744316101074219,mozaik,/home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET/mosaic/runs/UNET_binary_grayscale_mozaik_MASKED_METRICS_1708016451.646911/models/best_iou_model_UNET_binary_grayscale_mozaik_MASKED_METRICS_1708016451.646911.pt

@@ -1,0 +1,44 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --partition=gpu
+#SBATCH --gpus=1
+#SBATCH --cpus-per-task=16
+#SBATCH --job-name=dlv_mosaic
+#SBATCH --time=24:00:00
+#SBATCH --output=job_logs/slurm_output_%A.out
+
+module purge
+#module load 2022
+#module load PyTorch/1.12.0-foss-2022a-CUDA-11.7.0
+source activate conda_gpu
+which python    
+
+echo "Job started at $(date -d "3 days ago")"
+
+CLASS_NAME="mosaic"
+EXP_NAME="DeepLabV3"
+
+echo "Job Name: $SLURM_JOB_NAME"
+echo "Number of Nodes: $SLURM_JOB_NUM_NODES"
+echo "Node List: $SLURM_JOB_NODELIST"
+echo "Number of CPUs: $SLURM_CPUS_ON_NODE"
+echo "Total Memory: $SLURM_MEM_PER_NODE"
+echo "Number of GPUs: $SLURM_GPUS_ON_NODE"
+
+echo "Job ID: $SLURM_JOB_ID"
+echo "Class Name: $CLASS_NAME"
+echo "Experiment Name: $EXP_NAME"
+
+
+# Your job starts in the directory where you call sbatch
+EXP_DIR_PATH="/home/sfonseka/dev/SRST/srst-dataloader/experiments/${EXP_NAME}"
+
+
+cd $EXP_DIR_PATH/$CLASS_NAME
+# Activate your environment
+# Run your code
+srun python -u ${CLASS_NAME}_${EXP_NAME}.py
+
+
+echo "Job ended at $(date -d "2 days ago")"

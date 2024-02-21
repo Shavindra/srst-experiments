@@ -69,8 +69,6 @@ class ImageMaskDatasetRGB(Dataset):
 
         return image, mask
 
-
-
 class ImageMaskDatasetGrayscale(ImageMaskDatasetRGB):
 
     def __getitem__(self, idx):
@@ -91,13 +89,8 @@ class ImageMaskDatasetGrayscale(ImageMaskDatasetRGB):
             image = self.transform(image)
             mask = self.transform(mask)
 
-        print('MASK SHAPE', mask.shape) 
-        print('IMAGE SHAPE', image.shape)
-        print(image, mask, mask_path)
-
         return image, mask, mask_path
   
-
 class ImageSVMDataset(ImageMaskDatasetRGB):
     
     def __getitem__(self, idx):
@@ -109,12 +102,12 @@ class ImageSVMDataset(ImageMaskDatasetRGB):
         image = Image.open(img_path).convert("RGB")
         mask = Image.open(mask_path).convert("L")  # assuming mask is also RGB
 
-            # Convert the image and mask to numpy arrays
+        # Convert the image and mask to numpy arrays
         image_np = np.array(image)
         mask_np = np.array(mask)
 
-        print('MASK SHAPE', mask_np.shape)
-        print('IMAGE SHAPE', image_np.shape)
+        # print('MASK SHAPE', mask_np.shape, 'IMAGE SHAPE', image_np.shape )
+        # print('MASK', mask_np, 'IMAGE', image_np)
         # Flatten the image array
         image_np = image_np.flatten()
 
@@ -134,21 +127,20 @@ class SRST_Dataloader():
     def __init__(self, image_dir=None, mask_dir=None, transform=transform, mask_count=999999):
 
         self.dataset = ImageMaskDatasetRGB(image_dir=image_dir, mask_dir=mask_dir, transform=transform, mask_count=mask_count)
-        self.data_loader = DataLoader(self.dataset, batch_size=8, num_workers=4)
+        self.data_loader = DataLoader(self.dataset, batch_size=4, num_workers=4)
         pass 
 
-    
 class SRST_DataloaderGray():
 
     def __init__(self, image_dir=None, mask_dir=None, transform=transform, mask_count=999999):
         self.dataset = ImageMaskDatasetGrayscale(image_dir=image_dir, mask_dir=mask_dir, transform=transform, mask_count=mask_count)
         # Batch size changed to 12 and num_workers 8
-        self.data_loader = DataLoader(self.dataset, batch_size=2, num_workers=8)
+        self.data_loader = DataLoader(self.dataset, batch_size=4, num_workers=8)
         pass
 
 class SRST_DataloaderSVM():
     
         def __init__(self, image_dir='path/to/images', mask_dir='path/to/masks', transform=transform):
             self.dataset = ImageSVMDataset(image_dir=image_dir, mask_dir=mask_dir, transform=transform)
-            self.data_loader = DataLoader(self.dataset, batch_size=12, num_workers=8)
+            self.data_loader = DataLoader(self.dataset, batch_size=4, num_workers=8)
             pass

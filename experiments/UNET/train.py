@@ -7,8 +7,6 @@ import time
 ## SET UP PATHS
 import sys
 sys.path.append('../../..')  # This is /home/sfonseka/dev/SRST/srst-dataloader
-sys.path.append('../..')
-sys.path.append('..')  # This is /home/sfonseka/dev/SRST/srst-dataloader/experiments/UNET
 
 # Now you can import your module
 from models.UNET import UNetBaseline
@@ -20,7 +18,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 import os
-from torchmetrics.classification import BinaryJaccardIndex as IoU, BinaryAccuracy
+from torchmetrics.classification import BinaryJaccardIndex as IoU, BinaryAccuracy, BinaryPrecision as Precision, BinaryRecall as Recall, BinaryF1Score as F1
 
 
 # LOGGING
@@ -47,7 +45,7 @@ from datetime import datetime, timedelta
 now = datetime.now()
 
 # 14 days ago
-now_before = datetime.now() - timedelta(days=14)
+now_before = datetime.now() - timedelta(days=3)
 now_before = now_before.timestamp()
 now = now_before
 # %%
@@ -55,7 +53,65 @@ now = now_before
 EXPERIMENT_MODEL = 'UNET'
 DATASET_VARIANT = 'binary_grayscale'
 
-def train_unet(class_name, epochs=20, threshold=0.5, mask_count=99999, learning_rate=0.001):
+
+def train_unet(class_name, epochs=3, threshold=0.5, mask_count=6, learning_rate=0.001):
+
+    def tensor_to_value(tensor):
+        if isinstance(tensor, torch.Tensor):
+            return tensor.item()
+        return tensor
+
+    def save_metrics_to_csv(csv_file_path, experiment_name, experiment_version, epoch, train_metrics, val_metrics, lock=None):
+        """Saves training and validation metrics to a CSV file."""
+        # Define field names for CSV file
+        field_names = ['Experiment_Name', 'Experiment_Version', 'Epoch'] + \
+                    [f'train_{m}' for m in train_metrics.keys()] + \
+                    [f'val_{m}' for m in val_metrics.keys()]
+
+        # Check if the file exists and has content
+        file_exists = os.path.isfile(csv_file_path) and os.path.getsize(csv_file_path) > 0
+
+        # Acquire lock if provided (useful in multi-threaded environments)
+        if lock:
+            lock.acquire()
+
+        try:
+            with open(csv_file_path, 'a', newline='') as file:
+                exp_stats = csv.writer(file)
+
+                # Write header if the file doesn't exist or is empty
+                if not file_exists:
+                    exp_stats.writerow(field_names)
+
+                # Convert tensors to values and prepare data row
+                train_values = [tensor_to_value(value) for key, value in train_metrics.items()]
+                val_values = [tensor_to_value(value) for key, value in val_metrics.items()]
+                row = [experiment_name, experiment_version, epoch] + train_values + val_values
+
+                # Write the row to the CSV
+                exp_stats.writerow(row)
+                print('Wrote metrics to CSV file:', csv_file_path)
+        finally:
+            # Release lock if it was acquired
+            if lock:
+                lock.release()
+
+
+    def initialize_metrics(ignore_index=None):
+        metrics = {
+            'iou': IoU(ignore_index=ignore_index).to(DEVICE),
+            'accuracy': BinaryAccuracy(ignore_index=ignore_index).to(DEVICE),
+            'precision': Precision(ignore_index=ignore_index).to(DEVICE),
+            'recall': Recall(ignore_index=ignore_index).to(DEVICE),
+            'f1': F1(ignore_index=ignore_index).to(DEVICE)
+        }
+        return metrics
+
+    def update_metrics(metrics, preds, masks):
+        for metric in metrics.values():
+            metric.update(preds, masks)
+
+
 
     EPOCHS = epochs
     THRESHOLD = threshold  # Adjust as needed
@@ -136,7 +192,7 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=99999, learning_
 
     # Record the start time
     start_time = time.time()
-    patience = 20  # Number of epochs to wait for improvement before stopping
+    patience = 15  # Number of epochs to wait for improvement before stopping
     wait = 0  # Number of epochs we have waited so far without improvement
 
     best_val_loss = float('inf')
@@ -147,73 +203,49 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=99999, learning_
         print('Training')
         model.train()
         total_loss = 0
-        
-        metric_iou = IoU().to(DEVICE)  # Initialize IoU metric for binary classification
-        metric_accuracy = BinaryAccuracy().to(DEVICE)  # Initialize accuracy metric for binary classification
 
-        metric_iou_masked = IoU(ignore_index=0).to(DEVICE)  # Initialize IoU metric for binary classification
-        metric_accuracy_masked = BinaryAccuracy(ignore_index=0).to(DEVICE)  # Initialize accuracy metric for binary classification
+        # Initialize metrics
+        metrics = initialize_metrics()
+        metrics_masked = initialize_metrics(ignore_index=0)
 
         progress_bar = tqdm(train_loader, desc='Training', leave=False)
         for images, masks, __paths in progress_bar:
             images, masks = images.to(device), masks.to(device)
 
-            # Zero your gradients for every batch!
             optimizer.zero_grad()
             outputs = model(images)
-
-            # Update IoU metric
-            outputs_sigmoid = torch.sigmoid(outputs)  # Apply sigmoid to convert to probabilities
-    
-
-            # Compute the loss and its gradients
             loss = criterion(outputs, masks)
             loss.backward()
-
-            # Adjust learning weights
             optimizer.step()
 
             total_loss += loss.item()
+            preds = (torch.sigmoid(outputs) > THRESHOLD).int()
 
-            # Update IoU metric
-            preds = (outputs_sigmoid > THRESHOLD).int()  # Convert outputs to binary predictions
-
-            metric_iou.update(preds, masks)
-            metric_accuracy.update(preds, masks)
-
-            # Masked metrics
-            metric_iou_masked.update(preds, masks)
-            metric_accuracy_masked.update(preds, masks)
-
+            # Update metrics
+            update_metrics(metrics, preds, masks)
+            update_metrics(metrics_masked, preds, masks)
 
             progress_bar.set_postfix(loss=loss.item())
 
         avg_loss = total_loss / len(train_loader)
+
+        # Compute final metrics
+        final_metrics = {k: metric.compute() for k, metric in metrics.items()}
+        final_metrics_masked = {f"{k}_masked": metric.compute() for k, metric in metrics_masked.items()}
         
-        score_iou = metric_iou.compute()  # Compute IoU score for the epoch
-        score_accuracy = metric_accuracy.compute()  # Compute accuracy score for the epoch
+        final_metrics.update(final_metrics_masked)
+        final_metrics['train_loss'] = avg_loss
 
-        metrics = {
-            'train_loss': avg_loss,
-            'train_iou': score_iou,
-            'train_accuracy': score_accuracy,
-            'train_masked_iou': metric_iou_masked.compute(),
-            'train_masked_accuracy': metric_accuracy_masked.compute()
-        }
-
-        return metrics
+        return final_metrics
 
 
     def eval_model(model, val_loader, criterion, device):
         model.eval()
         total_loss = 0
 
-
-        metric_eval_iou = IoU().to(DEVICE)  # Initialize IoU for binary classification (background, class)
-        metric_eval_accuracy = BinaryAccuracy().to(DEVICE)  # Initialize accuracy metric for binary classification
-
-        metric_eval_masked_iou = IoU(ignore_index=0).to(DEVICE)  # Initialize IoU for binary classification (background, class)
-        metric_eval_masked_accuracy = BinaryAccuracy(ignore_index=0).to(DEVICE)  # Initialize accuracy metric for binary classification
+        # Initialize metrics
+        metrics = initialize_metrics()
+        metrics_masked = initialize_metrics(ignore_index=0)
 
         progress_bar = tqdm(val_loader, desc='Validation', leave=False)
         with torch.no_grad():
@@ -223,183 +255,101 @@ def train_unet(class_name, epochs=20, threshold=0.5, mask_count=99999, learning_
                 loss = criterion(outputs, eval_msks)
                 total_loss += loss.item()
 
-                # Apply sigmoid to convert logits to probabilities
-                outputs_sigmoid = torch.sigmoid(outputs)
+                eval_preds = (torch.sigmoid(outputs) > THRESHOLD).int()
 
-                # Update IoU metric
-                # For binary classification, you can use a threshold to convert outputs to binary format
-                eval_preds = (outputs_sigmoid > THRESHOLD).int()  # Adjust THRESHOLD as needed, e.g., 0.5
-
-                # print('OUTPUTS', outputs)
-                # print('OUTPUTS', outputs_sigmoid)
-                # print('PREDICTIONS', eval_preds)
-
-                metric_eval_iou.update(eval_preds, eval_msks)
-                metric_eval_accuracy.update(eval_preds, eval_msks)
-
-                # Masked metrics
-                metric_eval_masked_iou.update(eval_preds, eval_msks)
-                metric_eval_masked_accuracy.update(eval_preds, eval_msks)
+                # Update metrics
+                update_metrics(metrics, eval_preds, eval_msks)
+                update_metrics(metrics_masked, eval_preds, eval_msks)
 
                 progress_bar.set_postfix(loss=loss.item())
 
         avg_eval_loss = total_loss / len(val_loader)
+
+        # Compute final metrics
+        final_metrics = {k: metric.compute() for k, metric in metrics.items()}
+        final_metrics_masked = {f"{k}_masked": metric.compute() for k, metric in metrics_masked.items()}
         
-        score_eval_iou = metric_eval_iou.compute()  # Compute final IoU score
-        score_eval_accuracy = metric_eval_accuracy.compute()  # Compute final accuracy score
+        final_metrics.update(final_metrics_masked)
+        final_metrics['eval_loss'] = avg_eval_loss
 
-        print(f'Validation Loss: {avg_eval_loss}, Validation IoU: {score_eval_iou}, Validation Accuracy: {score_eval_accuracy}')
-        metrics = {
-            'eval_loss': avg_eval_loss,
-            'eval_iou': score_eval_iou,
-            'eval_accuracy': score_eval_accuracy,
-            'eval_masked_iou': metric_eval_masked_iou.compute(),
-            'eval_masked_accuracy': metric_eval_masked_accuracy.compute()
-        }
+        return final_metrics
 
-        return metrics
 
 
     # %%
 
     # Save the model if it's the best one so far in terms of loss or IoU
-    def save_model_checkpoint(model, optimizer, epoch, best_loss, best_iou, filename):
+    def save_model_checkpoint(model, optimizer, epoch, best_loss, best_iou, filename, metics=None):
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'best_loss': best_loss,
-            'best_iou': best_iou
+            'best_iou': best_iou,
         }, filename)
 
         # Early stopping check...
 
-
-    for epoch in tqdm(range(EPOCHS), desc='Epochs'):  # tqdm wrapper for epochs
+    for epoch in tqdm(range(EPOCHS), desc='Epochs'):
         train_metrics = train_one_epoch(model, train_loader, criterion, optimizer, DEVICE)
         val_metrics = eval_model(model, val_loader, criterion, DEVICE)
 
-        train_loss = train_metrics['train_loss']
-        train_metric_iou = train_metrics['train_iou'].item()
-        val_loss = val_metrics['eval_loss']
-        val_metric_iou = val_metrics['eval_iou'].item()
+        print(val_metrics)
 
-        train_metric_accuracy = train_metrics['train_accuracy'].item()
-        val_metric_accuracy = val_metrics['eval_accuracy'].item()
+        logging_step = epoch + 1
 
-
-        # Masked metrics
-        train_masked_iou = train_metrics['train_masked_iou'].item()
-        train_masked_accuracy = train_metrics['train_masked_accuracy'].item()
-
-        val_masked_iou = val_metrics['eval_masked_iou'].item()
-        val_masked_accuracy = val_metrics['eval_masked_accuracy'].item()
+        # Print and log metrics
+        for metric_name, value in {**train_metrics, **val_metrics}.items():
+            if isinstance(value, torch.Tensor):
+                value = value.item()
+            print(f'Epoch {epoch}, {metric_name}: {value}')
+            writer.add_scalar(f'Metrics/{metric_name}', value, logging_step)
 
 
+        # Check and save model based on best validation loss and IoU
+        if val_metrics['eval_loss'] < best_val_loss:
+            best_val_loss = val_metrics['eval_loss']
 
-        logging_step = epoch_number + 1
+            save_model_checkpoint(model, optimizer, logging_step, best_val_loss, best_iou, os.path.join(f'runs/{EXPERIMENT_NAME_VERSION}/models', f'best_loss_model_{EXPERIMENT_NAME_VERSION}.pt'), {
+                'train_metrics': train_metrics,
+                'val_metrics': val_metrics
+            })
 
-        print(f'Epoch {epoch}, Train Loss: {train_loss}, Val Loss: {val_loss}')
-        print(f'Epoch {epoch}, Logging Step: {logging_step}, Train IoU: {train_metric_iou}, Val IoU: {val_metric_iou}')
-        print(f'Epoch {epoch}, Logging Step: {logging_step}, Train Accuracy: {train_metric_accuracy}, Val Accuracy: {val_metric_accuracy}')
+            print(f'Best model saved with loss: {best_val_loss}')
 
-        # Masked metrics
-        print(f'Epoch {epoch}, Logging Step: {logging_step}, Train Masked IoU: {train_masked_iou}, Val Masked IoU: {val_masked_iou}')
-        print(f'Epoch {epoch}, Logging Step: {logging_step}, Train Masked Accuracy: {train_masked_accuracy}, Val Masked Accuracy: {val_masked_accuracy}')
+        if val_metrics['iou_masked'] > best_mask_iou:
+            best_mask_iou = val_metrics['iou_masked']
 
+            save_model_checkpoint(model, optimizer, logging_step, best_val_loss, best_iou, os.path.join(f'runs/{EXPERIMENT_NAME_VERSION}/models', f'best_mask_iou_model_{EXPERIMENT_NAME_VERSION}.pt'), {
+                'train_metrics': train_metrics,
+                'val_metrics': val_metrics
+            })
+            print(f'Best model saved with masked IoU: {best_mask_iou}')
 
-        writer.add_scalars('Training Loss vs Validation Loss', {'train': train_loss, 'val': val_loss}, logging_step, walltime=now_before)
-        writer.add_scalars('Training IoU vs Validation IoU', {'train': train_metric_iou, 'val': val_metric_iou}, logging_step, walltime=now_before)
-        writer.add_scalars('Training Accuracy vs Validation Accuracy', {'train': train_metric_accuracy, 'val': val_metric_accuracy}, logging_step, walltime=now_before)
+        if val_metrics['iou'] > best_iou:
+            best_iou = val_metrics['iou']
+            save_model_checkpoint(model, optimizer, logging_step, best_val_loss, best_iou, os.path.join(f'runs/{EXPERIMENT_NAME_VERSION}/models', f'best_iou_model_{EXPERIMENT_NAME_VERSION}.pt'), {
+                'train_metrics': train_metrics,
+                'val_metrics': val_metrics
+            })
+            print(f'Best model saved with IoU: {best_iou}')
 
-
-        # Masked metrics
-        writer.add_scalars('Masked Training IoU vs Validation IoU', {'train': train_masked_iou, 'val': val_masked_iou}, logging_step, walltime=now_before)
-        writer.add_scalars('Masked Training Accuracy vs Validation Accuracy', {'train': train_masked_accuracy, 'val': val_masked_accuracy}, logging_step, walltime=now_before)
-        writer.add_scalar('Metrics/Masked_Train_IoU', train_metrics['train_masked_iou'], logging_step, walltime=now_before)
-        writer.add_scalar('Metrics/Masked_Val_IoU', val_metrics['eval_masked_iou'], logging_step, walltime=now_before)
-
-
-        writer.add_scalar('Metrics/Train_Loss', train_loss, logging_step, walltime=now_before)
-        writer.add_scalar('Metrics/Val_Loss', val_loss, logging_step, walltime=now_before)
-
-        writer.add_scalar('Metrics/Train_IoU', train_metric_iou, logging_step, walltime=now_before)
-        writer.add_scalar('Metrics/Val_IoU', val_metric_iou, logging_step, walltime=now_before)
-
-        writer.add_scalar('Metrics/Train_Accuracy', train_metric_accuracy, logging_step, walltime=now_before)
-        writer.add_scalar('Metrics/Val_Accuracy', val_metric_accuracy, logging_step, walltime=now_before)
-
-        
-        # Masked metrics
-        writer.add_scalar('Metrics/Masked_Train_IoU', train_metrics['train_masked_iou'], logging_step, walltime=now_before)
-        writer.add_scalar('Metrics/Masked_Val_IoU', val_metrics['eval_masked_iou'], logging_step, walltime=now_before)
-        
-        writer.add_scalar('Metrics/Masked_Train_Accuracy', train_metrics['train_masked_accuracy'], logging_step, walltime=now_before)
-        writer.add_scalar('Metrics/Masked_Val_Accuracy', val_metrics['eval_masked_accuracy'], logging_step, walltime=now_before)
-
-
-
-        epoch_number += 1
-
-        # Write the metrics for this epoch to the CSV file
-        with lock:
-            with open(f'{MODEL_RESULT_FILE}', 'a', newline='') as file:
-                exp_stats = csv.writer(file)
-                exp_stats.writerow([
-                    EXPERIMENT_NAME,
-                    EXPERIMENT_NAME_VERSION,
-                    epoch_number,
-                    train_loss,
-                    val_loss,
-                    train_metric_iou,
-                    val_metric_iou,
-                    train_metric_accuracy,
-                    val_metric_accuracy
-                ])
-
-                print('Wrote metrics to CSV file: ', f'{MODEL_RESULT_FILE}')
-
-
-        writer.flush()
-
-
-        # Check for best performance and save model
-        print(' TIME TO SAVE MODEL')
-        print('Best Loss: ', best_val_loss)
-        print('Best IoU: ', best_iou)
-        print('Val Loss: ', val_loss)
-        print('Val IoU: ', val_metric_iou)
-
-        
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            save_model_checkpoint(model, optimizer, epoch_number, best_val_loss, best_iou,
-                                os.path.join(MODEL_SAVE_PATH, f'best_loss_model_{EXPERIMENT_NAME_VERSION}.pt'))
-            print(f'Saved new best loss model at epoch {epoch_number}')
-
-
-
-        if val_masked_iou > best_mask_iou:
-            best_mask_iou = val_masked_iou
-            save_model_checkpoint(model, optimizer, epoch_number, best_val_loss, best_iou,
-                                os.path.join(MODEL_SAVE_PATH, f'best_mask_iou_model_{EXPERIMENT_NAME_VERSION}.pt'))
-            print(f'Saved new best masked IoU model at epoch {epoch_number}')
-
-
-        if val_metric_iou > best_iou:
-            best_iou = val_metric_iou
-            save_model_checkpoint(model, optimizer, epoch_number, best_val_loss, best_iou,
-                                os.path.join(MODEL_SAVE_PATH, f'best_iou_model_{EXPERIMENT_NAME_VERSION}.pt'))
-            print(f'Saved new best IoU model at epoch {epoch_number}')
         else:
             wait += 1
 
-            # If we have waited for `patience` epochs without improvement, stop training
+        # Early stopping
         if wait >= patience:
-                print("Early stopping")
-                break
+            print("Early stopping")
+            break
+
+        # Usage in your training loop
+        csv_file_path = f'{MODEL_RESULT_FILE}'
+
+        save_metrics_to_csv(csv_file_path, EXPERIMENT_NAME, EXPERIMENT_NAME_VERSION, epoch + 1, train_metrics, val_metrics, lock)
+
 
     writer.close()
+
 
 
     # Compute the total running time

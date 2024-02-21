@@ -1,0 +1,36 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --partition=rome
+#SBATCH --cpus-per-task=48
+#SBATCH --mem=48G
+#SBATCH --job-name=svm_mosaic
+#SBATCH --time=24:00:00
+#SBATCH --output=job_logs/slurm_output_%A.out
+
+start_time=$(date +%s)
+echo "The current time is: $(start_time)"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Job Name: $SLURM_JOB_NAME"
+echo "Number of Nodes: $SLURM_JOB_NUM_NODES"
+echo "Node List: $SLURM_JOB_NODELIST"
+echo "Number of CPUs: $SLURM_CPUS_ON_NODE"
+echo "Total Memory: $SLURM_MEM_PER_NODE"
+
+
+module purge
+#module load 2022
+#module load PyTorch/1.12.0-foss-2022a-CUDA-11.7.0
+source activate conda_env
+which python    
+
+CLASS_NAME="mosaic"
+echo "Training with: ${CLASS_NAME}"
+# Your job starts in the directory where you call sbatch
+cd /home/sfonseka/dev/SRST/srst-dataloader/experiments/SVM/${CLASS_NAME}
+# Activate your environment
+# Run your code
+srun python -u ${CLASS_NAME}_svm.py
+
+echo "The job finished at: $(date)"
+echo "Total time elapsed: $((($(date +%s) - $start_time)/60)) minutes"

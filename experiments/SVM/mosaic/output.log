@@ -1,0 +1,33 @@
+sbatch: Single-node jobs run on a shared node by default. Add --exclusive if you want to use a node exclusively.
+sbatch: A full node consists of 128 CPU cores, 229376 MiB of memory and 0 GPUs and can be shared by up to 8 jobs.
+sbatch: By default shared jobs get 1792 MiB of memory per CPU core, unless explicitly overridden with --mem-per-cpu, --mem-per-gpu or --mem.
+sbatch: You will be charged for 48 CPUs, based on the number of CPUs and the amount memory that you've requested.
+Submitted batch job 5241821
+Submitting job for tiles
+sbatch: Single-node jobs run on a shared node by default. Add --exclusive if you want to use a node exclusively.
+sbatch: A full node consists of 128 CPU cores, 229376 MiB of memory and 0 GPUs and can be shared by up to 8 jobs.
+sbatch: By default shared jobs get 1792 MiB of memory per CPU core, unless explicitly overridden with --mem-per-cpu, --mem-per-gpu or --mem.
+sbatch: You will be charged for 48 CPUs, based on the number of CPUs and the amount memory that you've requested.
+Submitted batch job 5241851
+Submitting job for tiles
+sbatch: Single-node jobs run on a shared node by default. Add --exclusive if you want to use a node exclusively.
+sbatch: A full node consists of 128 CPU cores, 229376 MiB of memory and 0 GPUs and can be shared by up to 8 jobs.
+sbatch: By default shared jobs get 1792 MiB of memory per CPU core, unless explicitly overridden with --mem-per-cpu, --mem-per-gpu or --mem.
+sbatch: You will be charged for 48 CPUs, based on the number of CPUs and the amount memory that you've requested.
+Submitted batch job 5242316
+Submitting job for tiles
+sbatch: Single-node jobs run on a shared node by default. Add --exclusive if you want to use a node exclusively.
+sbatch: A full node consists of 128 CPU cores, 229376 MiB of memory and 0 GPUs and can be shared by up to 8 jobs.
+sbatch: By default shared jobs get 1792 MiB of memory per CPU core, unless explicitly overridden with --mem-per-cpu, --mem-per-gpu or --mem.
+sbatch: You will be charged for 48 CPUs, based on the number of CPUs and the amount memory that you've requested.
+Submitted batch job 5242747
+sbatch: Single-node jobs run on a shared node by default. Add --exclusive if you want to use a node exclusively.
+sbatch: A full node consists of 128 CPU cores, 229376 MiB of memory and 0 GPUs and can be shared by up to 8 jobs.
+sbatch: By default shared jobs get 1792 MiB of memory per CPU core, unless explicitly overridden with --mem-per-cpu, --mem-per-gpu or --mem.
+sbatch: You will be charged for 48 CPUs, based on the number of CPUs and the amount memory that you've requested.
+Submitted batch job 5242880
+sbatch: Single-node jobs run on a shared node by default. Add --exclusive if you want to use a node exclusively.
+sbatch: A full node consists of 128 CPU cores, 229376 MiB of memory and 0 GPUs and can be shared by up to 8 jobs.
+sbatch: By default shared jobs get 1792 MiB of memory per CPU core, unless explicitly overridden with --mem-per-cpu, --mem-per-gpu or --mem.
+sbatch: You will be charged for 48 CPUs, based on the number of CPUs and the amount memory that you've requested.
+Submitted batch job 5254442
